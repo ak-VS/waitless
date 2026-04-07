@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Maison Noir — Table Reservation</title>
+<title>Dineflow — Smart Restaurant Queue</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
@@ -15,180 +15,160 @@
   --border:#2a2620;--border2:#3a342c;
   --green:#4a9e6e;--green-dim:#2d6145;
 }
-html,body{
-  height:100%;width:100%;
-  background:var(--bg);
-  color:var(--text);
-  font-family:'Jost',sans-serif;
-  font-weight:300;
-  overflow-x:hidden;
-}
+html,body{height:100%;width:100%;background:var(--bg);color:var(--text);font-family:'Jost',sans-serif;font-weight:300;overflow-x:hidden}
 
-/* ── Progress bar ── */
-.prog{display:flex;gap:5px;padding:10px 20px 6px;background:var(--bg)}
+/* progress */
+.prog{display:flex;gap:5px;padding:10px 20px 6px;background:var(--bg);position:sticky;top:0;z-index:50}
 .pd{height:2px;border-radius:2px;background:var(--border2);transition:.3s;flex:1}
 .pd.on{background:var(--gold)}
 
-/* ── Views ── */
-.view{display:none;flex-direction:column;min-height:calc(100vh - 30px);animation:fadeIn .25s ease}
+/* views */
+.view{display:none;flex-direction:column;min-height:calc(100vh - 30px);animation:fadeIn .3s ease}
 .view.active{display:flex}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* toast notification */
+.toast{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-120px);
+  background:#1a1a1a;border:1px solid var(--gold-dim);border-radius:10px;
+  padding:12px 16px;width:min(320px,88vw);z-index:999;
+  transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+  display:flex;align-items:flex-start;gap:10px;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast-icon{width:32px;height:32px;border-radius:8px;background:rgba(201,168,76,.15);border:1px solid var(--gold-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.toast-title{font-size:11px;font-weight:500;color:var(--text);letter-spacing:.3px;margin-bottom:2px}
+.toast-msg{font-size:10px;color:var(--text3);letter-spacing:.3px;line-height:1.5}
+.toast-app{font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
 
 /* ── VIEW 1: QR Scanner ── */
-.qr-cam{
-  flex:1;background:#000;display:flex;align-items:center;
-  justify-content:center;position:relative;min-height:55vw;max-height:60vh;
-}
-.cam-lines{
-  position:absolute;inset:0;
-  background-image:linear-gradient(rgba(201,168,76,.03) 1px,transparent 1px),
-  linear-gradient(90deg,rgba(201,168,76,.03) 1px,transparent 1px);
-  background-size:28px 28px;
-}
-.frame{width:min(200px,52vw);height:min(200px,52vw);position:relative;z-index:3}
-.cn{position:absolute;width:28px;height:28px;border-color:var(--gold);border-style:solid}
+.qr-cam{flex:1;background:#000;display:flex;align-items:center;justify-content:center;position:relative;min-height:52vw;max-height:58vh}
+.cam-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(201,168,76,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,.03) 1px,transparent 1px);background-size:26px 26px}
+.frame{width:min(190px,50vw);height:min(190px,50vw);position:relative;z-index:3}
+.cn{position:absolute;width:26px;height:26px;border-color:var(--gold);border-style:solid}
 .cn.tl{top:0;left:0;border-width:2px 0 0 2px;border-radius:3px 0 0 0}
 .cn.tr{top:0;right:0;border-width:2px 2px 0 0;border-radius:0 3px 0 0}
 .cn.bl{bottom:0;left:0;border-width:0 0 2px 2px;border-radius:0 0 0 3px}
 .cn.br{bottom:0;right:0;border-width:0 2px 2px 0;border-radius:0 0 3px 0}
-.scanline{
-  position:absolute;left:4px;right:4px;height:2px;
-  background:var(--gold);opacity:.65;z-index:4;
-  animation:scan 2s ease-in-out infinite;
-}
+.scanline{position:absolute;left:4px;right:4px;height:2px;background:var(--gold);opacity:.65;z-index:4;animation:scan 2s ease-in-out infinite}
 @keyframes scan{0%{top:4px}50%{top:calc(100% - 6px)}100%{top:4px}}
-.qr-inner{
-  width:min(130px,34vw);height:min(130px,34vw);
-  background:#fff;border-radius:3px;z-index:2;padding:8px;
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-}
+.qr-inner{width:min(125px,33vw);height:min(125px,33vw);background:#fff;border-radius:3px;z-index:2;padding:8px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
 .qr-inner svg{width:100%;height:100%}
-.qr-bottom{padding:22px 20px 28px}
-.rest-nm{font-family:'Cormorant Garamond',serif;font-size:clamp(22px,6vw,30px);font-weight:300;color:var(--text)}
+
+.qr-bottom{padding:20px 20px 28px}
+.rest-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(74,158,110,.08);border:1px solid var(--green-dim);border-radius:2px;padding:5px 10px;margin-bottom:12px}
+.rest-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:p 1.5s ease-in-out infinite}
+.rest-badge-txt{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--green)}
+.rest-nm{font-family:'Cormorant Garamond',serif;font-size:clamp(20px,5.5vw,28px);font-weight:300;color:var(--text);line-height:1.1}
 .rest-nm em{font-style:italic;color:var(--gold)}
-.rest-tag{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);margin-bottom:12px;margin-top:2px}
-.hint-txt{font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:18px}
-.primary-btn{
-  width:100%;background:var(--gold);border:none;color:#0d0d0d;
-  font-family:'Jost',sans-serif;font-size:11px;letter-spacing:2.5px;
-  text-transform:uppercase;padding:15px;border-radius:3px;cursor:pointer;
-  font-weight:500;transition:.15s;
-}
+.rest-addr{font-size:9px;letter-spacing:1px;color:var(--text3);margin-top:3px;margin-bottom:14px}
+.hint-txt{font-size:12px;color:var(--text2);line-height:1.65;margin-bottom:18px}
+.primary-btn{width:100%;background:var(--gold);border:none;color:#0d0d0d;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;padding:14px;border-radius:3px;cursor:pointer;font-weight:500;transition:.15s}
 .primary-btn:active{background:var(--gold-light)}
-.ghost-btn{
-  width:100%;background:transparent;border:1px solid var(--border2);color:var(--text3);
-  font-family:'Jost',sans-serif;font-size:10px;letter-spacing:2px;
-  text-transform:uppercase;padding:12px;border-radius:3px;cursor:pointer;margin-top:8px;
-}
+.ghost-btn{width:100%;background:transparent;border:1px solid var(--border2);color:var(--text3);font-family:'Jost',sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:11px;border-radius:3px;cursor:pointer;margin-top:8px}
 .ghost-btn:active{border-color:var(--gold-dim)}
 
 /* ── VIEW 2: Floor Map ── */
 .map-header{padding:14px 16px 10px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg)}
-.mh-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.mh-name{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--text)}
+.mh-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mh-name{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--text)}
 .mh-name em{font-style:italic;color:var(--gold)}
 .mh-badge{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;background:rgba(74,158,110,.1);border:1px solid var(--green-dim);color:var(--green);padding:4px 9px;border-radius:2px}
+
+.live-stats{display:flex;gap:0;margin-bottom:10px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.ls-item{flex:1;padding:8px 10px;text-align:center;border-right:1px solid var(--border)}
+.ls-item:last-child{border-right:none}
+.ls-val{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text);line-height:1}
+.ls-val.red{color:#c94c4c}
+.ls-val.grn{color:var(--green)}
+.ls-lbl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-top:2px}
+
 .filter-row{display:flex;gap:5px;flex-wrap:wrap}
-.fb{
-  background:transparent;border:1px solid var(--border2);color:var(--text3);
-  font-family:'Jost',sans-serif;font-size:9px;letter-spacing:1px;
-  text-transform:uppercase;padding:5px 10px;border-radius:2px;cursor:pointer;
-}
+.fb{background:transparent;border:1px solid var(--border2);color:var(--text3);font-family:'Jost',sans-serif;font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:5px 10px;border-radius:2px;cursor:pointer;transition:.15s}
 .fb.on{background:rgba(201,168,76,.1);border-color:var(--gold);color:var(--gold)}
-.map-area{flex:1;overflow:hidden;background:var(--bg2);position:relative}
-#floorsvg{width:100%;height:100%;display:block;min-height:300px}
-.map-legend{display:flex;gap:12px;padding:8px 16px;border-top:1px solid var(--border);flex-wrap:wrap;background:var(--bg)}
-.ll{display:flex;align-items:center;gap:5px;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)}
+
+.map-area{flex:1;overflow:hidden;background:var(--bg2);position:relative;min-height:280px}
+#floorsvg{width:100%;height:100%;display:block;min-height:280px}
+
+.map-legend{display:flex;gap:10px;padding:7px 16px;border-top:1px solid var(--border);flex-wrap:wrap;background:var(--bg)}
+.ll{display:flex;align-items:center;gap:5px;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)}
 .ld{width:10px;height:10px;border-radius:1px;flex-shrink:0}
-.map-tray{
-  padding:12px 16px 16px;flex-shrink:0;border-top:1px solid var(--border);
-  background:var(--bg);min-height:68px;
-}
+
+.map-tray{padding:11px 16px 14px;flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);min-height:64px}
 .tray-empty{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);text-align:center;padding:8px 0}
 .tray-info{display:none;align-items:center;gap:12px}
-.tray-name{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--text);flex:1}
+.tray-name{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--text);flex:1}
 .tray-meta{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-top:1px}
-.tray-btn{
-  background:var(--gold);border:none;color:#0d0d0d;
-  font-family:'Jost',sans-serif;font-size:9px;letter-spacing:2px;
-  text-transform:uppercase;padding:11px 16px;border-radius:2px;cursor:pointer;
-  font-weight:500;white-space:nowrap;
-}
+.tray-btn{background:var(--gold);border:none;color:#0d0d0d;font-family:'Jost',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:11px 16px;border-radius:2px;cursor:pointer;font-weight:500;white-space:nowrap}
 .tray-btn:active{background:var(--gold-light)}
 
-/* ── VIEW 3: Booking form ── */
-.form-view{padding:20px 20px 32px;flex:1;overflow-y:auto}
-.form-back{
-  display:flex;align-items:center;gap:6px;font-size:9px;letter-spacing:1.5px;
-  text-transform:uppercase;color:var(--text3);cursor:pointer;margin-bottom:16px;
-}
+/* ── VIEW 3: Form ── */
+.form-view{padding:20px 20px 36px;flex:1;overflow-y:auto}
+.form-back{display:flex;align-items:center;gap:6px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);cursor:pointer;margin-bottom:16px}
 .form-title{font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--text);margin-bottom:2px}
 .form-sub{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:20px}
 .fl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:5px}
-.fi{
-  width:100%;background:var(--bg3);border:1px solid var(--border2);
-  color:var(--text);font-family:'Jost',sans-serif;font-size:14px;
-  padding:10px 12px;border-radius:2px;outline:none;margin-bottom:14px;
-  -webkit-appearance:none;
-}
+.fi{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:'Jost',sans-serif;font-size:14px;padding:10px 12px;border-radius:2px;outline:none;margin-bottom:14px;-webkit-appearance:none}
 .fi:focus{border-color:var(--gold-dim)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pax-row{display:flex;gap:6px;margin-bottom:14px}
-.pb{
-  flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);
-  font-family:'Jost',sans-serif;font-size:13px;padding:10px 4px;
-  border-radius:2px;cursor:pointer;text-align:center;
-}
+.pb{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-family:'Jost',sans-serif;font-size:13px;padding:10px 4px;border-radius:2px;cursor:pointer;text-align:center;transition:.15s}
 .pb.on{background:rgba(201,168,76,.1);border-color:var(--gold);color:var(--gold)}
-.submit-btn{
-  width:100%;background:var(--gold);border:none;color:#0d0d0d;
-  font-family:'Jost',sans-serif;font-size:11px;letter-spacing:2.5px;
-  text-transform:uppercase;padding:15px;border-radius:2px;cursor:pointer;
-  font-weight:500;margin-top:6px;
-}
+.submit-btn{width:100%;background:var(--gold);border:none;color:#0d0d0d;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;padding:14px;border-radius:2px;cursor:pointer;font-weight:500;margin-top:6px}
 .submit-btn:active{background:var(--gold-light)}
 
 /* ── VIEW 4: Token ── */
-.token-view{padding:28px 20px 36px;flex:1;display:flex;flex-direction:column;align-items:center}
-.check-ring{
-  width:52px;height:52px;border-radius:50%;
-  background:rgba(74,158,110,.1);border:1.5px solid var(--green-dim);
-  display:flex;align-items:center;justify-content:center;margin-bottom:14px;
-}
-.tv-title{font-family:'Cormorant Garamond',serif;font-size:30px;color:var(--text);text-align:center}
-.tv-name{font-size:11px;color:var(--text3);letter-spacing:.5px;margin-bottom:20px;text-align:center}
-.tok-card{
-  width:100%;background:var(--bg2);border:1px solid var(--border2);
-  border-radius:4px;padding:18px 12px;text-align:center;margin-bottom:12px;
-}
-.tok-lbl{font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
-.tok-num{font-family:'Cormorant Garamond',serif;font-size:54px;letter-spacing:8px;color:var(--gold)}
-.tok-pos{font-size:10px;color:var(--text3);letter-spacing:.5px;margin-top:4px}
+.token-view{padding:26px 20px 36px;flex:1;display:flex;flex-direction:column;align-items:center}
+.check-ring{width:50px;height:50px;border-radius:50%;background:rgba(74,158,110,.1);border:1.5px solid var(--green-dim);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.tv-title{font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--text);text-align:center}
+.tv-name{font-size:11px;color:var(--text3);letter-spacing:.5px;margin-bottom:18px;text-align:center}
+
+.tok-card{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:16px 12px;text-align:center;margin-bottom:10px}
+.tok-lbl{font-size:7px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.tok-num{font-family:'Cormorant Garamond',serif;font-size:52px;letter-spacing:8px;color:var(--gold)}
+.tok-pos{font-size:10px;color:var(--text3);letter-spacing:.5px;margin-top:4px;transition:.3s}
+
 .stats-row{display:flex;gap:8px;width:100%;margin-bottom:10px}
-.stat{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:12px 6px;text-align:center}
-.sv{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--text)}
+.stat{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:11px 6px;text-align:center}
+.sv{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--text);transition:.4s}
 .sl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-top:2px}
-.live-bar{
-  width:100%;background:var(--bg2);border:1px solid var(--border);
-  border-radius:3px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:10px;
-}
+
+.live-bar{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;animation:p 1.5s ease-in-out infinite}
 @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
-.lt{font-size:11px;color:var(--text2);letter-spacing:.3px}
-.tbl-info{
-  width:100%;background:rgba(201,168,76,.05);border:1px solid var(--gold-dim);
-  border-radius:3px;padding:11px 14px;margin-bottom:auto;
-}
+.lt{font-size:10px;color:var(--text2);letter-spacing:.3px}
+
+.tbl-info{width:100%;background:rgba(201,168,76,.05);border:1px solid var(--gold-dim);border-radius:3px;padding:10px 14px;margin-bottom:auto}
 .ti-lbl{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:4px}
-.ti-val{font-size:13px;color:var(--text);letter-spacing:.3px}
-.restart-btn{
-  width:100%;background:transparent;border:1px solid var(--border2);color:var(--text3);
-  font-family:'Jost',sans-serif;font-size:9px;letter-spacing:2px;
-  text-transform:uppercase;padding:12px;border-radius:2px;cursor:pointer;margin-top:16px;
-}
+.ti-val{font-size:12px;color:var(--text);letter-spacing:.3px}
+
+.queue-progress{width:100%;margin-bottom:10px}
+.qp-bar{width:100%;height:3px;background:var(--border2);border-radius:2px;overflow:hidden;margin-top:6px}
+.qp-fill{height:100%;background:var(--gold);border-radius:2px;transition:width 1s ease}
+.qp-label{display:flex;justify-content:space-between;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)}
+
+.restart-btn{width:100%;background:transparent;border:1px solid var(--border2);color:var(--text3);font-family:'Jost',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:11px;border-radius:2px;cursor:pointer;margin-top:14px}
+
+/* powered by */
+.powered{text-align:center;padding:10px;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text3)}
+.powered span{color:var(--gold-dim)}
 </style>
 </head>
 <body>
+
+<!-- Toast notification -->
+<div class="toast" id="toast">
+  <div class="toast-icon">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM8 5v3.5l2 2" stroke="#C9A84C" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div>
+    <div class="toast-title">Your table is almost ready</div>
+    <div class="toast-msg" id="toast-msg">Approx. 15 minutes remaining · Paradise Biryani</div>
+    <div class="toast-app">Dineflow · Queue update</div>
+  </div>
+</div>
 
 <div class="prog" id="prog">
   <div class="pd on"></div>
@@ -223,20 +203,43 @@ html,body{
     </div>
   </div>
   <div class="qr-bottom">
-    <div class="rest-nm">Maison <em>Noir</em></div>
-    <div class="rest-tag">Fine dining · Table reservation</div>
-    <div class="hint-txt">Scan the QR code at the restaurant entrance to view available tables and reserve your spot instantly.</div>
+    <div class="rest-badge">
+      <div class="rest-badge-dot"></div>
+      <div class="rest-badge-txt">Verified restaurant · Live tonight</div>
+    </div>
+    <div class="rest-nm">Paradise <em>Biryani</em></div>
+    <div class="rest-addr">Banjara Hills, Hyderabad · Opens 11:00 AM</div>
+    <div class="hint-txt">Scan to view available tables and join the virtual queue. No waiting in line — roam freely until your table is ready.</div>
     <button class="primary-btn" onclick="goView(2)">Scan &amp; View Floor Map →</button>
     <button class="ghost-btn" onclick="goView(2)">Enter table code manually</button>
   </div>
+  <div class="powered">Powered by <span>Dineflow</span></div>
 </div>
 
 <!-- VIEW 2: Floor Map -->
 <div class="view" id="v2">
   <div class="map-header">
     <div class="mh-top">
-      <div class="mh-name">Maison <em>Noir</em></div>
+      <div class="mh-name">Paradise <em>Biryani</em></div>
       <div class="mh-badge">Live · Tonight</div>
+    </div>
+    <div class="live-stats" id="live-stats">
+      <div class="ls-item">
+        <div class="ls-val red" id="ls-waiting">12</div>
+        <div class="ls-lbl">Waiting</div>
+      </div>
+      <div class="ls-item">
+        <div class="ls-val grn" id="ls-avail">4</div>
+        <div class="ls-lbl">Tables free</div>
+      </div>
+      <div class="ls-item">
+        <div class="ls-val" id="ls-wait">~24m</div>
+        <div class="ls-lbl">Avg wait</div>
+      </div>
+      <div class="ls-item">
+        <div class="ls-val" id="ls-seated">38</div>
+        <div class="ls-lbl">Seated today</div>
+      </div>
     </div>
     <div class="filter-row">
       <button class="fb on" data-z="all" onclick="setZone(this)">All</button>
@@ -314,11 +317,11 @@ html,body{
     </div>
     <label class="fl">Special requests</label>
     <input class="fi" placeholder="Occasion, dietary needs, allergies…"/>
-    <button class="submit-btn" onclick="confirmBooking()">Confirm Reservation</button>
+    <button class="submit-btn" onclick="confirmBooking()">Join Queue</button>
   </div>
 </div>
 
-<!-- VIEW 4: Queue Token -->
+<!-- VIEW 4: Token -->
 <div class="view" id="v4">
   <div class="token-view">
     <div class="check-ring">
@@ -326,28 +329,51 @@ html,body{
         <path d="M4 11l5 5 9-9" stroke="#4a9e6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
-    <div class="tv-title">You're confirmed</div>
-    <div class="tv-name" id="tv-name">Welcome, Guest</div>
+    <div class="tv-title">You're in the queue</div>
+    <div class="tv-name" id="tv-name">Welcome, Guest · Paradise Biryani</div>
+
     <div class="tok-card">
       <div class="tok-lbl">Queue token</div>
       <div class="tok-num" id="tok-num">—</div>
       <div class="tok-pos" id="tok-pos">—</div>
     </div>
+
     <div class="stats-row">
-      <div class="stat"><div class="sv" id="sv-pos">—</div><div class="sl">Position</div></div>
-      <div class="stat"><div class="sv" id="sv-wait">—</div><div class="sl">Min wait</div></div>
-      <div class="stat"><div class="sv" id="sv-pax">—</div><div class="sl">Guests</div></div>
+      <div class="stat">
+        <div class="sv" id="sv-pos">—</div>
+        <div class="sl">Position</div>
+      </div>
+      <div class="stat">
+        <div class="sv" id="sv-wait">—</div>
+        <div class="sl">Min wait</div>
+      </div>
+      <div class="stat">
+        <div class="sv" id="sv-pax">—</div>
+        <div class="sl">Guests</div>
+      </div>
     </div>
+
+    <div class="queue-progress" id="qprogress">
+      <div class="qp-label">
+        <span>Queue progress</span>
+        <span id="qp-pct">—</span>
+      </div>
+      <div class="qp-bar"><div class="qp-fill" id="qp-fill" style="width:0%"></div></div>
+    </div>
+
     <div class="live-bar">
       <div class="pulse"></div>
-      <div class="lt">Waiting for table assignment…</div>
+      <div class="lt" id="live-status">Waiting for table assignment…</div>
     </div>
+
     <div class="tbl-info">
-      <div class="ti-lbl">Your reserved table</div>
+      <div class="ti-lbl">Your requested table</div>
       <div class="ti-val" id="ti-val">—</div>
     </div>
-    <button class="restart-btn" onclick="restart()">Start over</button>
+
+    <button class="restart-btn" onclick="restart()">Leave queue / Start over</button>
   </div>
+  <div class="powered">Powered by <span>Dineflow</span></div>
 </div>
 
 <script>
@@ -390,6 +416,8 @@ const TABLES=[
 ];
 const ZN={window:'Window Seating',indoor:'Indoor Dining',outdoor:'Outdoor Terrace',private:'Private Dining'};
 let selT=null,curZone='all',curPax=1;
+let queuePos=0,queueTotal=0,waitMins=0;
+let tickInterval=null,toastTimeout=null;
 
 function drawFloor(){
   const g=document.getElementById('tg');g.innerHTML='';
@@ -397,7 +425,7 @@ function drawFloor(){
     const zok=curZone==='all'||t.z===curZone;
     const grp=document.createElementNS('http://www.w3.org/2000/svg','g');
     grp.style.cursor=t.sold?'not-allowed':'pointer';
-    grp.style.opacity=t.sold?'0.25':zok?'1':'0.18';
+    grp.style.opacity=t.sold?'0.25':zok?'1':'0.15';
     const isSel=selT&&selT.id===t.id;
     const fill=isSel?'rgba(201,168,76,.13)':t.sold?'#161616':'#1e2a1e';
     const stroke=isSel?'#C9A84C':t.sold?'#222':t.pop?'#8a6e2f':'#2d4a2d';
@@ -412,16 +440,14 @@ function drawFloor(){
     const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
     lbl.setAttribute('x',cx);lbl.setAttribute('y',cy-2);
     lbl.setAttribute('text-anchor','middle');lbl.setAttribute('dominant-baseline','middle');
-    lbl.setAttribute('font-size',t.s>=8?7:6);
-    lbl.setAttribute('font-family','Jost,sans-serif');
+    lbl.setAttribute('font-size',t.s>=8?7:6);lbl.setAttribute('font-family','Jost,sans-serif');
     lbl.setAttribute('fill',isSel?'#C9A84C':'#5a5448');
     lbl.textContent=t.id;
     const sub=document.createElementNS('http://www.w3.org/2000/svg','text');
     sub.setAttribute('x',cx);sub.setAttribute('y',cy+6);
     sub.setAttribute('text-anchor','middle');sub.setAttribute('dominant-baseline','middle');
     sub.setAttribute('font-size',5);sub.setAttribute('font-family','Jost,sans-serif');
-    sub.setAttribute('fill','#3a342c');
-    sub.textContent=t.s+'p';
+    sub.setAttribute('fill','#3a342c');sub.textContent=t.s+'p';
     grp.appendChild(lbl);grp.appendChild(sub);
     if(!t.sold){
       grp.addEventListener('click',()=>{
@@ -439,7 +465,7 @@ function updateTray(){
   if(!selT){empty.style.display='block';info.style.display='none';return;}
   empty.style.display='none';info.style.display='flex';
   document.getElementById('tray-name').textContent='Table '+selT.id+' · '+selT.s+'-Seater';
-  document.getElementById('tray-meta').textContent=ZN[selT.z]+(selT.pop?' · Popular':'');
+  document.getElementById('tray-meta').textContent=ZN[selT.z]+(selT.pop?' · Popular choice':'');
 }
 
 function setZone(el){
@@ -465,19 +491,71 @@ function goView(n){
 function confirmBooking(){
   const name=document.getElementById('fname').value.trim()||'Guest';
   const tok=String(Math.floor(1000+Math.random()*9000));
-  const pos=Math.floor(2+Math.random()*7);
-  const wait=pos*4+2;
-  document.getElementById('tv-name').textContent='Welcome, '+name;
+  queuePos=Math.floor(3+Math.random()*8);
+  queueTotal=queuePos+Math.floor(4+Math.random()*6);
+  waitMins=queuePos*4+Math.floor(2+Math.random()*4);
+
+  document.getElementById('tv-name').textContent='Welcome, '+name+' · Paradise Biryani';
   document.getElementById('tok-num').textContent=tok;
-  document.getElementById('tok-pos').textContent='Position '+pos+' of '+(pos+Math.floor(3+Math.random()*5))+' · Est. wait '+wait+' min';
-  document.getElementById('sv-pos').textContent=pos;
-  document.getElementById('sv-wait').textContent='~'+wait;
   document.getElementById('sv-pax').textContent=curPax;
-  document.getElementById('ti-val').textContent=selT?'Table '+selT.id+' · '+ZN[selT.z]+' · '+selT.s+'-Seater':'—';
+  updateQueueDisplay();
+  document.getElementById('ti-val').textContent=selT?'Table '+selT.id+' · '+ZN[selT.z]+' · '+selT.s+'-Seater':'Any available table';
   goView(4);
+  startQueueTick();
+
+  // Show toast notification after 20 seconds
+  toastTimeout=setTimeout(()=>{
+    document.getElementById('toast-msg').textContent='Approx. 15 minutes remaining · Paradise Biryani';
+    document.getElementById('toast').classList.add('show');
+    setTimeout(()=>document.getElementById('toast').classList.remove('show'),5000);
+  },20000);
 }
 
-function restart(){selT=null;drawFloor();updateTray();goView(1);}
+function updateQueueDisplay(){
+  const pct=Math.max(5,Math.round((1-(queuePos/queueTotal))*100));
+  document.getElementById('sv-pos').textContent=queuePos;
+  document.getElementById('sv-wait').textContent='~'+waitMins;
+  document.getElementById('tok-pos').textContent='Position '+queuePos+' of '+queueTotal+' · Est. wait '+waitMins+' min';
+  document.getElementById('qp-pct').textContent=pct+'% through queue';
+  document.getElementById('qp-fill').style.width=pct+'%';
+
+  const statusEl=document.getElementById('live-status');
+  if(queuePos<=2){
+    statusEl.textContent='Your table is almost ready — please make your way in';
+    statusEl.style.color='#4a9e6e';
+  } else if(queuePos<=4){
+    statusEl.textContent='Getting close — a few parties ahead of you';
+  } else {
+    statusEl.textContent='Waiting for table assignment…';
+  }
+}
+
+function startQueueTick(){
+  if(tickInterval)clearInterval(tickInterval);
+  // Tick every 30 seconds — position goes down by 1
+  tickInterval=setInterval(()=>{
+    if(queuePos>1){
+      queuePos--;
+      waitMins=Math.max(2,waitMins-4);
+      updateQueueDisplay();
+      // show toast at 2 mins remaining
+      if(waitMins<=6&&waitMins>2){
+        document.getElementById('toast-msg').textContent='Your table is ready — please head to the entrance now';
+        document.getElementById('toast').classList.add('show');
+        setTimeout(()=>document.getElementById('toast').classList.remove('show'),6000);
+      }
+    } else {
+      clearInterval(tickInterval);
+    }
+  },30000);
+}
+
+function restart(){
+  if(tickInterval)clearInterval(tickInterval);
+  if(toastTimeout)clearTimeout(toastTimeout);
+  document.getElementById('toast').classList.remove('show');
+  selT=null;drawFloor();updateTray();goView(1);
+}
 
 drawFloor();updateTray();
 </script>
