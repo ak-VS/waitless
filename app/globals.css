@@ -1,26 +1,55 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Jost:wght@300;400;500&display=swap');
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --gold: #C9A84C;
+  --gold-dim: #8a6e2f;
+  --gold-light: #e8c97a;
+  --green: #4a9e6e;
+  --green-dim: #2d6145;
+  --red: #c94c4c;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+[data-theme='dark'] {
+  --bg: #0d0d0d;
+  --bg2: #141414;
+  --bg3: #1a1a1a;
+  --bg4: #222;
+  --text: #e8e0d0;
+  --text2: #9e9588;
+  --text3: #5a5448;
+  --border: #2a2620;
+  --border2: #3a342c;
+  --stat-bg: #1a1a1a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-theme='light'] {
+  --bg: #faf8f4;
+  --bg2: #f0ede8;
+  --bg3: #e8e4de;
+  --bg4: #ddd9d2;
+  --text: #1a1612;
+  --text2: #5a5040;
+  --text3: #9a9080;
+  --border: #ddd9d2;
+  --border2: #ccc8c0;
+  --stat-bg: #f0ede8;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
+
+button { font-family: 'Jost', sans-serif; }
+
+@keyframes scan { 0%{top:4px} 50%{top:calc(100% - 6px)} 100%{top:4px} }
+@keyframes spin { to{transform:rotate(360deg)} }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }

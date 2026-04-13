@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
 
     // Get this entry
     const entryResult = await query(
-      `SELECT * FROM queue_entries WHERE id = $1`,
-      [queue_entry_id]
+      `SELECT * FROM queue_entries WHERE id = $1 AND restaurant_id = $2`,
+      [queue_entry_id, restaurant_id]
     );
 
     if (entryResult.rows.length === 0) {
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     const entry = entryResult.rows[0];
 
-    // Get position — how many waiting entries joined before this one
+    // Position — only count entries from SAME restaurant
     const posResult = await query(
       `SELECT COUNT(*) FROM queue_entries 
        WHERE restaurant_id = $1 
@@ -40,12 +40,14 @@ export async function GET(req: NextRequest) {
 
     const position = parseInt(posResult.rows[0].count) + 1;
 
-    // Get total waiting
+    // Total waiting — only for THIS restaurant
     const totalResult = await query(
       `SELECT COUNT(*) FROM queue_entries 
-       WHERE restaurant_id = $1 AND status = 'waiting'`,
+       WHERE restaurant_id = $1 
+       AND status = 'waiting'`,
       [restaurant_id]
     );
+
     const total_waiting = parseInt(totalResult.rows[0].count);
     const estimated_wait = Math.max(2, (position - 1) * 8 + 5);
 
