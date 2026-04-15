@@ -40,3 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 restID.txt
+
+# Python
+ml-service/venv/
+ml-service/__pycache__/
+ml-service/*.pyc
+ml-service/model/
+*.pkl
