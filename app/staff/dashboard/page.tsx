@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { getStaffSession, clearStaffSession } from '@/lib/staff-auth';
+import { io, Socket } from 'socket.io-client';
 
 export default function StaffDashboard() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function StaffDashboard() {
   const [showToast, setShowToast] = useState(false);
   const [clock, setClock] = useState('');
   const [loading, setLoading] = useState(true);
+  const socketRef = useRef<Socket | null>(null);
 
   const showToastMsg = (msg: string) => {
     setToast(msg); setShowToast(true);
@@ -46,6 +48,45 @@ export default function StaffDashboard() {
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, [fetchData, restaurant]);
+  
+  useEffect(() => {
+  if (!restaurant) return;
+
+  const socket = io('http://localhost:3000', {
+    transports: ['websocket']
+  });
+
+  socketRef.current = socket;
+
+  socket.on('connect', () => {
+    console.log('Staff socket connected');
+    socket.emit('join_restaurant', restaurant.id);
+  });
+
+  // New customer joined queue
+  socket.on('queue_updated', (data: any) => {
+    console.log('Queue updated:', data);
+    fetchData(); // Refresh queue
+    if (data.type === 'new_customer') {
+      showToastMsg(`New customer joined · ${data.entry.customer_name} (${data.entry.token})`);
+    }
+  });
+
+socket.on('restaurant_closed', () => {
+  fetchData();
+  showToastMsg('Restaurant closed for the night');
+});
+
+  // Table status changed
+  socket.on('table_updated', (data: any) => {
+    console.log('Table updated:', data);
+    fetchData(); // Refresh tables
+  });
+
+  return () => {
+    socket.disconnect();
+  };
+}, [restaurant, fetchData]);
 
   useEffect(() => {
     const tick = () => setClock(new Date().toLocaleTimeString('en-IN', {
@@ -97,6 +138,25 @@ export default function StaffDashboard() {
     showToastMsg(`Token ${entry.token} skipped`);
     fetchData();
   };
+
+const [closingNight, setClosingNight] = useState(false);
+const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+const handleCloseNight = async () => {
+  setClosingNight(true);
+  const res = await fetch('/api/staff/closenight', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ restaurant_id: restaurant.id })
+  });
+  const data = await res.json();
+  if (data.success) {
+    showToastMsg(`Night closed · ${data.customers_notified} customers notified · All tables cleared`);
+  }
+  setShowCloseConfirm(false);
+  setClosingNight(false);
+  fetchData();
+};
 
   const handleLogout = () => { clearStaffSession(); router.push('/staff/login'); };
 
@@ -168,10 +228,45 @@ export default function StaffDashboard() {
             Logout
           </button>
           <button
+  onClick={() => setShowCloseConfirm(true)}
+  style={{
+    background: 'transparent', border: '1px solid #c94c4c',
+    color: '#c94c4c', fontFamily: "'Jost',sans-serif",
+    fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase',
+    padding: '5px 10px', borderRadius: 2, cursor: 'pointer'
+  }}>
+  Close Night
+</button>
+          <button
   onClick={() => router.push('/restaurant/profile')}
   style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 10px', borderRadius: 2, cursor: 'pointer' }}>
   Profile
 </button>
+{/* Close night confirm */}
+{showCloseConfirm && (
+  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.8)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+    <div style={{ background: 'var(--bg2)', border: '1px solid #c94c4c', borderRadius: 8, padding: 24, width: '100%', maxWidth: 360 }}>
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, color: 'var(--text)', marginBottom: 8 }}>
+        Close for the night?
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.7, marginBottom: 20 }}>
+        This will skip all customers in queue, notify them, clear all tables and end all active sessions. This cannot be undone.
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button
+          onClick={handleCloseNight} disabled={closingNight}
+          style={{ flex: 1, background: '#c94c4c', border: 'none', color: '#fff', fontFamily: "'Jost',sans-serif", fontSize: 10, letterSpacing: '2px', textTransform: 'uppercase', padding: 12, borderRadius: 3, cursor: 'pointer', fontWeight: 500, opacity: closingNight ? .7 : 1 }}>
+          {closingNight ? 'Closing...' : 'Yes, Close Night'}
+        </button>
+        <button
+          onClick={() => setShowCloseConfirm(false)}
+          style={{ flex: 1, background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 10, letterSpacing: '2px', textTransform: 'uppercase', padding: 12, borderRadius: 3, cursor: 'pointer' }}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import numpy as np
 import json
 import os
 from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = FastAPI(title="Waitless ML Service", version="1.0.0")
 
@@ -16,12 +17,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load model on startup
 model = None
 metadata = None
+scheduler = BackgroundScheduler()
 
-@app.on_event("startup")
-async def load_model():
+def load_model():
     global model, metadata
     model_path = "model/wait_time_model.pkl"
     metadata_path = "model/metadata.json"
@@ -33,6 +33,27 @@ async def load_model():
         print(f"Model loaded — MAE: {metadata['mae']} min, R²: {metadata['r2']}")
     else:
         print("WARNING: No model found. Run train_model.py first.")
+
+def do_retrain():
+    print(f"\n[{datetime.now()}] Starting nightly retrain...")
+    try:
+        import subprocess, sys
+        subprocess.run([sys.executable, "retrain.py"], check=True)
+        load_model()
+        print(f"[{datetime.now()}] Retrain complete. Model reloaded.")
+    except Exception as e:
+        print(f"[{datetime.now()}] Retrain failed: {e}")
+
+@app.on_event("startup")
+async def startup():
+    load_model()
+    scheduler.add_job(do_retrain, 'cron', hour=2, minute=0)
+    scheduler.start()
+    print("Scheduler started — retrain runs nightly at 2:00 AM")
+
+@app.on_event("shutdown")
+async def shutdown():
+    scheduler.shutdown()
 
 class PredictRequest(BaseModel):
     party_size: int
@@ -51,19 +72,28 @@ class PredictResponse(BaseModel):
 
 @app.get("/")
 def root():
+    jobs = scheduler.get_jobs()
     return {
         "service": "Waitless ML",
         "status": "running",
-        "model_loaded": model is not None
+        "model_loaded": model is not None,
+        "next_retrain": str(jobs[0].next_run_time) if jobs else "unknown"
     }
 
 @app.get("/health")
 def health():
+    jobs = scheduler.get_jobs()
     return {
         "status": "healthy",
         "model_loaded": model is not None,
-        "metadata": metadata
+        "metadata": metadata,
+        "next_retrain": str(jobs[0].next_run_time) if jobs else "unknown"
     }
+
+@app.post("/retrain")
+def manual_retrain():
+    do_retrain()
+    return {"success": True, "message": "Retrain complete", "metadata": metadata}
 
 @app.post("/predict", response_model=PredictResponse)
 def predict_wait_time(req: PredictRequest):
@@ -79,22 +109,15 @@ def predict_wait_time(req: PredictRequest):
     occupancy_rate = req.tables_occupied / max(req.tables_total, 1)
 
     features = np.array([[
-        hour,
-        day,
-        req.party_size,
-        req.tables_occupied,
-        req.tables_total,
-        req.queue_length,
-        req.avg_party_size_ahead,
-        occupancy_rate,
-        is_peak,
-        is_weekend
+        hour, day, req.party_size,
+        req.tables_occupied, req.tables_total,
+        req.queue_length, req.avg_party_size_ahead,
+        occupancy_rate, is_peak, is_weekend
     ]])
 
     prediction = model.predict(features)[0]
     prediction = max(2, round(float(prediction)))
 
-    # Confidence based on occupancy
     if occupancy_rate < 0.3:
         confidence = "high"
     elif occupancy_rate < 0.7:

@@ -10,7 +10,7 @@ export function initSocket(server: any): Server {
   io = new Server(server, {
     cors: {
       origin: '*',
-      methods: ['GET', 'POST']
+      methods: ['GET', 'POST', 'PATCH']
     }
   });
 
@@ -37,16 +37,16 @@ export function initSocket(server: any): Server {
   return io;
 }
 
-// Emit queue update to all customers and staff of a restaurant
-export function emitQueueUpdate(restaurant_id: string, data: any) {
+// Emit to all staff of a restaurant
+export function emitToRestaurant(restaurant_id: string, event: string, data: any) {
   if (io) {
-    io.to(`restaurant_${restaurant_id}`).emit('queue_updated', data);
+    io.to(`restaurant_${restaurant_id}`).emit(event, data);
   }
 }
 
-// Notify a specific customer
-export function emitCustomerUpdate(queue_entry_id: string, data: any) {
+// Emit to a specific customer
+export function emitToCustomer(queue_entry_id: string, event: string, data: any) {
   if (io) {
-    io.to(`queue_${queue_entry_id}`).emit('status_updated', data);
+    io.to(`queue_${queue_entry_id}`).emit(event, data);
   }
 }

@@ -11,7 +11,9 @@ export async function GET(req: NextRequest) {
     }
 
     const result = await query(
-      'SELECT id, name, address, city, phone FROM restaurants WHERE id = $1',
+      `SELECT id, name, address, city, phone, timezone, 
+              opening_time, closing_time 
+       FROM restaurants WHERE id = $1`,
       [id]
     );
 

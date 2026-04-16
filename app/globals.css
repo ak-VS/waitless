@@ -20,6 +20,21 @@
   --border: #2a2620;
   --border2: #3a342c;
   --stat-bg: #1a1a1a;
+  --map-bg: #141414;
+  --map-zone-window: #111111;
+  --map-zone-indoor: #141414;
+  --map-zone-outdoor: #0f130f;
+  --map-zone-private: #111213;
+  --map-zone-bottom: #0d0f0d;
+  --map-kitchen: #0e0e0e;
+  --map-table: #1e2a1e;
+  --map-table-border: #2d4a2d;
+  --map-label: #3a342c;
+  --map-zone-label: #2a2620;
+  --map-outdoor-label: #2d4a2d;
+  --map-entrance: #1a1a1a;
+  --pillar: #1a1816;
+  --pillar-border: #2e2a24;
 }
 
 [data-theme='light'] {
@@ -29,10 +44,25 @@
   --bg4: #ddd9d2;
   --text: #1a1612;
   --text2: #5a5040;
-  --text3: #9a9080;
-  --border: #ddd9d2;
-  --border2: #ccc8c0;
+  --text3: #7a7060;
+  --border: #d8d4ce;
+  --border2: #c8c4be;
   --stat-bg: #f0ede8;
+  --map-bg: #f0ede8;
+  --map-zone-window: #e8e0d4;
+  --map-zone-indoor: #ede8e0;
+  --map-zone-outdoor: #e4ede0;
+  --map-zone-private: #e8e4ec;
+  --map-zone-bottom: #dff0de;
+  --map-kitchen: #e0dcd8;
+  --map-table: #d4e8d4;
+  --map-table-border: #6a9e6a;
+  --map-label: #a09888;
+  --map-zone-label: #b0a898;
+  --map-outdoor-label: #6a9e6a;
+  --map-entrance: #e0dcd8;
+  --pillar: #c8c4be;
+  --pillar-border: #a8a49e;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -44,6 +74,11 @@ html, body {
   font-weight: 300;
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
 }
 
 button { font-family: 'Jost', sans-serif; }

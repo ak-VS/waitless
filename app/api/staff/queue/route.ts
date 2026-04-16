@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/db';
+import { emitToCustomer, emitToRestaurant } from '@/lib/socket';
 
 export async function GET(req: NextRequest) {
   try {
@@ -8,15 +9,24 @@ export async function GET(req: NextRequest) {
     if (!restaurant_id) return NextResponse.json({ error: 'restaurant_id required' }, { status: 400 });
 
     // Auto-skip no-shows (notified > 5 mins ago)
-    await query(
+    const noShows = await query(
       `UPDATE queue_entries 
        SET status = 'skipped', no_show_at = NOW()
        WHERE restaurant_id = $1 
        AND status = 'waiting'
        AND notified_at IS NOT NULL
-       AND notified_at < NOW() - INTERVAL '5 minutes'`,
+       AND notified_at < NOW() - INTERVAL '5 minutes'
+       RETURNING id`,
       [restaurant_id]
     );
+
+    // Notify auto-skipped customers
+    for (const row of noShows.rows) {
+      emitToCustomer(row.id, 'status_updated', {
+        type: 'skipped',
+        message: 'You were skipped due to no response. You can rejoin the queue if you are still at the restaurant.'
+      });
+    }
 
     // Get queue — priority first, then by join time
     const result = await query(
@@ -55,7 +65,10 @@ export async function PATCH(req: NextRequest) {
     if (!queue_entry_id || !action) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
     if (action === 'seat') {
-      await query(`UPDATE queue_entries SET status = 'seated', assigned_table_id = $1, seated_at = NOW() WHERE id = $2`, [table_id, queue_entry_id]);
+      await query(
+        `UPDATE queue_entries SET status = 'seated', assigned_table_id = $1, seated_at = NOW() WHERE id = $2`,
+        [table_id, queue_entry_id]
+      );
       if (table_id) {
         const entry = await query('SELECT * FROM queue_entries WHERE id = $1', [queue_entry_id]);
         if (entry.rows.length > 0) {
@@ -63,16 +76,26 @@ export async function PATCH(req: NextRequest) {
             `INSERT INTO table_sessions (restaurant_id, table_id, party_size, day_of_week, hour_of_day) VALUES ($1,$2,$3,$4,$5)`,
             [entry.rows[0].restaurant_id, table_id, entry.rows[0].party_size, new Date().getDay(), new Date().getHours()]
           );
-          await query(`UPDATE restaurant_tables SET status = 'occupied', current_queue_entry_id = $1 WHERE id = $2`, [queue_entry_id, table_id]);
+          await query(
+            `UPDATE restaurant_tables SET status = 'occupied', current_queue_entry_id = $1 WHERE id = $2`,
+            [queue_entry_id, table_id]
+          );
         }
       }
       return NextResponse.json({ success: true });
 
     } else if (action === 'prioritize') {
-      // Toggle VIP priority
       const current = await query('SELECT priority FROM queue_entries WHERE id = $1', [queue_entry_id]);
       const newPriority = current.rows[0]?.priority === 'vip' ? 'normal' : 'vip';
       await query(`UPDATE queue_entries SET priority = $1 WHERE id = $2`, [newPriority, queue_entry_id]);
+
+      // Emit queue reorder to staff
+      emitToRestaurant(restaurant_id, 'queue_updated', {
+        type: 'priority_changed',
+        queue_entry_id,
+        priority: newPriority
+      });
+
       return NextResponse.json({ success: true, priority: newPriority });
 
     } else if (action === 'notify') {
@@ -81,14 +104,39 @@ export async function PATCH(req: NextRequest) {
 
     } else if (action === 'skip') {
       await query(`UPDATE queue_entries SET status = 'skipped' WHERE id = $1`, [queue_entry_id]);
+
+      // Notify customer they were skipped
+      emitToCustomer(queue_entry_id, 'status_updated', {
+        type: 'skipped',
+        message: 'You were skipped. You can rejoin the queue if you are still at the restaurant.'
+      });
+
+      // Update staff queue
+      emitToRestaurant(restaurant_id, 'queue_updated', {
+        type: 'customer_skipped',
+        queue_entry_id
+      });
+
       return NextResponse.json({ success: true });
 
     } else if (action === 'im_on_my_way') {
-      await query(`UPDATE queue_entries SET notified_at = NOW() - INTERVAL '2 minutes' WHERE id = $1`, [queue_entry_id]);
+      await query(
+        `UPDATE queue_entries SET notified_at = NOW() - INTERVAL '2 minutes' WHERE id = $1`,
+        [queue_entry_id]
+      );
       return NextResponse.json({ success: true });
 
     } else if (action === 'remove') {
-      await query(`UPDATE queue_entries SET status = 'left', left_at = NOW() WHERE id = $1`, [queue_entry_id]);
+      await query(
+        `UPDATE queue_entries SET status = 'left', left_at = NOW() WHERE id = $1`,
+        [queue_entry_id]
+      );
+
+      emitToCustomer(queue_entry_id, 'status_updated', {
+        type: 'removed',
+        message: 'You have been removed from the queue.'
+      });
+
       return NextResponse.json({ success: true });
     }
 
