@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/db';
+import { predictWaitTime } from '@/lib/ml';
 
 export async function GET(req: NextRequest) {
   try {
@@ -8,28 +9,21 @@ export async function GET(req: NextRequest) {
     const restaurant_id = searchParams.get('restaurant_id');
 
     if (!queue_entry_id || !restaurant_id) {
-      return NextResponse.json(
-        { error: 'Missing id or restaurant_id' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing id or restaurant_id' }, { status: 400 });
     }
 
-    // Get this entry
     const entryResult = await query(
       `SELECT * FROM queue_entries WHERE id = $1 AND restaurant_id = $2`,
       [queue_entry_id, restaurant_id]
     );
 
     if (entryResult.rows.length === 0) {
-      return NextResponse.json(
-        { error: 'Queue entry not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Queue entry not found' }, { status: 404 });
     }
 
     const entry = entryResult.rows[0];
 
-    // Position — only count entries from SAME restaurant
+    // Position
     const posResult = await query(
       `SELECT COUNT(*) FROM queue_entries 
        WHERE restaurant_id = $1 
@@ -37,39 +31,55 @@ export async function GET(req: NextRequest) {
        AND joined_at < $2`,
       [restaurant_id, entry.joined_at]
     );
-
     const position = parseInt(posResult.rows[0].count) + 1;
 
-    // Total waiting — only for THIS restaurant
+    // Total waiting
     const totalResult = await query(
       `SELECT COUNT(*) FROM queue_entries 
-       WHERE restaurant_id = $1 
-       AND status = 'waiting'`,
+       WHERE restaurant_id = $1 AND status = 'waiting'`,
       [restaurant_id]
     );
-
     const total_waiting = parseInt(totalResult.rows[0].count);
-    const estimated_wait = Math.max(2, (position - 1) * 8 + 5);
+
+    // Table stats for ML
+    const tableStats = await query(
+      `SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE status = 'occupied') as occupied
+       FROM restaurant_tables WHERE restaurant_id = $1`,
+      [restaurant_id]
+    );
+    const tables_total = parseInt(tableStats.rows[0].total) || 28;
+    const tables_occupied = parseInt(tableStats.rows[0].occupied) || 0;
+
+    // Live ML prediction based on current position
+    const prediction = await predictWaitTime({
+      party_size: entry.party_size,
+      tables_occupied,
+      tables_total,
+      queue_length: position - 1,
+      avg_party_size_ahead: 2.5
+    });
 
     return NextResponse.json({
       success: true,
       position,
       total_waiting,
-      estimated_wait,
+      estimated_wait: prediction.minutes,
+      confidence: prediction.confidence,
+      ml_factors: prediction.factors,
       status: entry.status,
       token: entry.token,
       customer_name: entry.customer_name,
       party_size: entry.party_size,
       zone_preference: entry.zone_preference,
       assigned_table_id: entry.assigned_table_id,
+      notified_at: entry.notified_at,
       joined_at: entry.joined_at
     });
 
   } catch (error) {
     console.error('Queue status error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

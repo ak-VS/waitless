@@ -81,18 +81,20 @@ export default function QueueToken() {
 
         {/* WAIT TIME — primary hero element */}
         <div style={{...s.waitHero, ...(isAlmost ? s.waitHeroGreen : {})}}>
-          <div style={s.waitLabel}>Estimated wait</div>
-          <div style={{...s.waitNum, ...(isAlmost ? {color:'#4a9e6e'} : {})}}>
-            {data.estimated_wait}
-            <span style={s.waitUnit}>min</span>
-          </div>
-          <div style={s.waitSub}>
-            {isAlmost
-              ? 'Head to the entrance now'
-              : isClose
-              ? 'Almost your turn'
-              : `${data.customer_name} · Party of ${data.party_size}`}
-          </div>
+  <div style={s.waitLabel}>Estimated wait</div>
+  <div style={{...s.waitNum, ...(isAlmost ? {color:'#4a9e6e'} : {})}}>
+    {data.confidence === 'low'
+      ? Math.ceil(data.estimated_wait * 1.1)
+      : data.estimated_wait}
+    <span style={s.waitUnit}>min</span>
+  </div>
+  <div style={s.waitSub}>
+    {isAlmost
+      ? 'Head to the entrance now'
+      : isClose
+      ? 'Almost your turn'
+      : `${data.customer_name} · Party of ${data.party_size}`}
+  </div>
 
           {/* Progress arc */}
           <div style={s.progWrap}>
