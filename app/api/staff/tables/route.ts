@@ -59,26 +59,28 @@ export async function PATCH(req: NextRequest) {
         [table_id]
       );
 
-      // 3. Get table details to find matching queue entry
+      // 3. Get table details
       const tableResult = await query(
         'SELECT * FROM restaurant_tables WHERE id = $1',
         [table_id]
       );
       const table = tableResult.rows[0];
 
-      // 4. Find next waiting customer that fits this table
+      // 4. Find next waiting customer — priority first, then zone match
       const nextCustomer = await query(
         `SELECT * FROM queue_entries
          WHERE restaurant_id = $1 
          AND status = 'waiting'
          AND party_size <= $2
          AND (zone_preference = 'any' OR zone_preference = $3)
-         ORDER BY joined_at ASC
+         ORDER BY 
+           CASE WHEN priority = 'vip' THEN 0 ELSE 1 END,
+           joined_at ASC
          LIMIT 1`,
         [restaurant_id, table.seats, table.zone]
       );
 
-      // 5. If no zone match, find any customer that fits
+      // 5. If no zone match, find any fitting customer
       let customer = nextCustomer.rows[0];
       if (!customer) {
         const anyCustomer = await query(
@@ -86,7 +88,9 @@ export async function PATCH(req: NextRequest) {
            WHERE restaurant_id = $1 
            AND status = 'waiting'
            AND party_size <= $2
-           ORDER BY joined_at ASC
+           ORDER BY 
+             CASE WHEN priority = 'vip' THEN 0 ELSE 1 END,
+             joined_at ASC
            LIMIT 1`,
           [restaurant_id, table.seats]
         );
@@ -110,6 +114,22 @@ export async function PATCH(req: NextRequest) {
           [customer.id, table_id]
         );
 
+        // 8. Send push notification
+        try {
+          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              queue_entry_id: customer.id,
+              title: 'Your table is ready!',
+              message: `Table ${table.table_label} is ready. Please head to the entrance now.`,
+              type: 'table_ready'
+            })
+          });
+        } catch (e) {
+          console.error('Push notification failed:', e);
+        }
+
         return NextResponse.json({
           success: true,
           table_status: 'reserved',
@@ -129,7 +149,6 @@ export async function PATCH(req: NextRequest) {
       });
 
     } else if (action === 'delay') {
-      // Table needs cleaning — keep as occupied but flag it
       await query(
         `UPDATE restaurant_tables SET status = 'cleaning' WHERE id = $1`,
         [table_id]
@@ -137,11 +156,70 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: true, table_status: 'cleaning' });
 
     } else if (action === 'ready') {
-      // Table cleaned and ready — trigger auto-assign
       await query(
         `UPDATE restaurant_tables SET status = 'free' WHERE id = $1`,
         [table_id]
       );
+
+      // Auto assign next customer after cleaning
+      const tableResult = await query(
+        'SELECT * FROM restaurant_tables WHERE id = $1',
+        [table_id]
+      );
+      const table = tableResult.rows[0];
+
+      const nextCustomer = await query(
+        `SELECT * FROM queue_entries
+         WHERE restaurant_id = $1 
+         AND status = 'waiting'
+         AND party_size <= $2
+         ORDER BY 
+           CASE WHEN priority = 'vip' THEN 0 ELSE 1 END,
+           joined_at ASC
+         LIMIT 1`,
+        [restaurant_id, table.seats]
+      );
+
+      const customer = nextCustomer.rows[0];
+      if (customer) {
+        await query(
+          `UPDATE queue_entries 
+           SET notified_at = NOW(), assigned_table_id = $1
+           WHERE id = $2`,
+          [table_id, customer.id]
+        );
+        await query(
+          `UPDATE restaurant_tables 
+           SET status = 'reserved', current_queue_entry_id = $1
+           WHERE id = $2`,
+          [customer.id, table_id]
+        );
+        try {
+          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              queue_entry_id: customer.id,
+              title: 'Your table is ready!',
+              message: `Table ${table.table_label} is ready. Please head to the entrance now.`,
+              type: 'table_ready'
+            })
+          });
+        } catch (e) {
+          console.error('Push notification failed:', e);
+        }
+        return NextResponse.json({
+          success: true,
+          table_status: 'reserved',
+          notified_customer: {
+            id: customer.id,
+            name: customer.customer_name,
+            token: customer.token,
+            party_size: customer.party_size,
+          }
+        });
+      }
+
       return NextResponse.json({ success: true, table_status: 'free' });
 
     } else if (action === 'occupy') {

@@ -26,7 +26,28 @@ export default function JoinQueue() {
       .then(r => r.json())
       .then(d => setRestaurant(d.restaurant));
   }, [restaurant_id]);
-
+useEffect(() => {
+  if (!restaurant_id || table_id) return;
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const res = await fetch('/api/geofence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurant_id,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        })
+      });
+      const data = await res.json();
+      if (!data.allowed) {
+        setError(`You must be within 100m of the restaurant. You are ${data.distance_meters}m away.`);
+      }
+    },
+    () => {}
+  );
+}, [restaurant_id, table_id]);
   const handleSubmit = async () => {
     if (!name.trim()) { setError('Please enter your name'); return; }
     if (!partySize) { setError('Please select party size'); return; }

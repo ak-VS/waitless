@@ -49,6 +49,14 @@ export default function QueueToken() {
     return () => clearInterval(interval);
   }, [fetchStatus]);
 
+  useEffect(() => {
+  if (!queue_entry_id || !restaurant_id || !data) return;
+  // Register push notifications
+  import('@/lib/push').then(({ registerPushNotifications }) => {
+    registerPushNotifications(queue_entry_id, restaurant_id);
+  });
+}, [queue_entry_id, restaurant_id, data]);
+
   if (!data) return (
     <div style={{background:'var(--bg)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div style={{width:32,height:32,border:'2px solid var(--border)',borderTop:'2px solid var(--gold)',borderRadius:'50%',animation:'spin 1s linear infinite'}}></div>

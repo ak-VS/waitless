@@ -60,7 +60,19 @@ export async function GET(req: NextRequest) {
       queue_length: position - 1,
       avg_party_size_ahead: 2.5
     });
-
+// Send 15 min warning notification if wait is between 14-16 mins
+if (prediction.minutes >= 14 && prediction.minutes <= 16) {
+  fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      queue_entry_id: entry.id,
+      title: 'Almost your turn!',
+      message: `About 15 minutes remaining. Start making your way to ${entry.restaurant_name || 'the restaurant'}.`,
+      type: 'fifteen_min_warning'
+    })
+  }).catch(() => {});
+}
     return NextResponse.json({
       success: true,
       position,
@@ -78,8 +90,11 @@ export async function GET(req: NextRequest) {
       joined_at: entry.joined_at
     });
 
+    
   } catch (error) {
     console.error('Queue status error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+
+  
 }
