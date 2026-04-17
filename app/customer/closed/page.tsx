@@ -1,18 +1,18 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-function ClosedContent() {
-  const searchParams = useSearchParams();
-  const restaurant_id = searchParams.get('r');
+export default function RestaurantClosed() {
   const [restaurant, setRestaurant] = useState<any>(null);
 
   useEffect(() => {
+    // Read restaurant_id from URL directly — no useSearchParams needed
+    const params = new URLSearchParams(window.location.search);
+    const restaurant_id = params.get('r');
     if (!restaurant_id) return;
     fetch(`/api/restaurant/info?id=${restaurant_id}`)
       .then(r => r.json())
       .then(d => setRestaurant(d.restaurant));
-  }, [restaurant_id]);
+  }, []);
 
   return (
     <div style={{
@@ -46,7 +46,7 @@ function ClosedContent() {
         fontSize: 11, color: 'var(--text3)', textAlign: 'center',
         lineHeight: 1.7, marginBottom: 20
       }}>
-        {restaurant?.name} is not accepting walk-ins at this time.
+        {restaurant?.name || 'This restaurant'} is not accepting walk-ins at this time.
         Please come back during opening hours.
       </div>
 
@@ -68,18 +68,5 @@ function ClosedContent() {
         Powered by <span style={{ color: 'var(--gold-dim)' }}>Waitless</span>
       </div>
     </div>
-  );
-}
-
-export default function RestaurantClosed() {
-  return (
-    <Suspense fallback={
-      <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 32, height: 32, border: '2px solid var(--border)', borderTop: '2px solid var(--gold)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
-    }>
-      <ClosedContent />
-    </Suspense>
   );
 }
