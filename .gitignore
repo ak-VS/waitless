@@ -45,5 +45,5 @@ restID.txt
 ml-service/venv/
 ml-service/__pycache__/
 ml-service/*.pyc
-ml-service/model/
-*.pkl
+#ml-service/model/
+#*.pkl
