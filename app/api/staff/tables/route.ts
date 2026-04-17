@@ -99,7 +99,7 @@ export async function PATCH(req: NextRequest) {
       }
 
       if (customer) {
-        // 6. Notify customer — starts 5 min no-show timer
+        // 6. Notify customer
         await query(
           `UPDATE queue_entries 
            SET notified_at = NOW(), assigned_table_id = $1
@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest) {
           [table_id, customer.id]
         );
 
-        // 7. Reserve table for this customer
+        // 7. Reserve table
         await query(
           `UPDATE restaurant_tables 
            SET status = 'reserved', current_queue_entry_id = $1
@@ -115,7 +115,7 @@ export async function PATCH(req: NextRequest) {
           [customer.id, table_id]
         );
 
-        // 8. Send push notification
+        // 8. Push notification
         try {
           await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
             method: 'POST',
@@ -130,26 +130,26 @@ export async function PATCH(req: NextRequest) {
         } catch (e) {
           console.error('Push notification failed:', e);
         }
-// Emit real-time update to staff
-emitToRestaurant(restaurant_id, 'table_updated', {
-  type: 'table_cleared',
-  table_id,
-  new_status: customer ? 'reserved' : 'free',
-  notified_customer: customer ? {
-    id: customer.id,
-    name: customer.customer_name,
-    token: customer.token
-  } : null
-});
 
-// Emit real-time update to notified customer
-if (customer) {
-  emitToCustomer(customer.id, 'status_updated', {
-    type: 'table_ready',
-    message: `Table ${table.table_label} is ready. Please head to the entrance now.`,
-    table_label: table.table_label
-  });
-}
+        // 9. Emit real-time to staff
+        emitToRestaurant(restaurant_id, 'table_updated', {
+          type: 'table_cleared',
+          table_id,
+          new_status: 'reserved',
+          notified_customer: {
+            id: customer.id,
+            name: customer.customer_name,
+            token: customer.token
+          }
+        });
+
+        // 10. Emit real-time to customer
+        emitToCustomer(customer.id, 'status_updated', {
+          type: 'table_ready',
+          message: `Table ${table.table_label} is ready. Please head to the entrance now.`,
+          table_label: table.table_label
+        });
+
         return NextResponse.json({
           success: true,
           table_status: 'reserved',
@@ -162,6 +162,13 @@ if (customer) {
         });
       }
 
+      emitToRestaurant(restaurant_id, 'table_updated', {
+        type: 'table_cleared',
+        table_id,
+        new_status: 'free',
+        notified_customer: null
+      });
+
       return NextResponse.json({
         success: true,
         table_status: 'free',
@@ -173,6 +180,13 @@ if (customer) {
         `UPDATE restaurant_tables SET status = 'cleaning' WHERE id = $1`,
         [table_id]
       );
+
+      emitToRestaurant(restaurant_id, 'table_updated', {
+        type: 'table_cleaning',
+        table_id,
+        new_status: 'cleaning'
+      });
+
       return NextResponse.json({ success: true, table_status: 'cleaning' });
 
     } else if (action === 'ready') {
@@ -181,7 +195,6 @@ if (customer) {
         [table_id]
       );
 
-      // Auto assign next customer after cleaning
       const tableResult = await query(
         'SELECT * FROM restaurant_tables WHERE id = $1',
         [table_id]
@@ -214,6 +227,7 @@ if (customer) {
            WHERE id = $2`,
           [customer.id, table_id]
         );
+
         try {
           await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
             method: 'POST',
@@ -228,6 +242,24 @@ if (customer) {
         } catch (e) {
           console.error('Push notification failed:', e);
         }
+
+        emitToRestaurant(restaurant_id, 'table_updated', {
+          type: 'table_ready',
+          table_id,
+          new_status: 'reserved',
+          notified_customer: {
+            id: customer.id,
+            name: customer.customer_name,
+            token: customer.token
+          }
+        });
+
+        emitToCustomer(customer.id, 'status_updated', {
+          type: 'table_ready',
+          message: `Table ${table.table_label} is ready. Please head to the entrance now.`,
+          table_label: table.table_label
+        });
+
         return NextResponse.json({
           success: true,
           table_status: 'reserved',
@@ -240,54 +272,57 @@ if (customer) {
         });
       }
 
+      emitToRestaurant(restaurant_id, 'table_updated', {
+        type: 'table_ready',
+        table_id,
+        new_status: 'free'
+      });
+
       return NextResponse.json({ success: true, table_status: 'free' });
 
     } else if (action === 'occupy') {
-  await query(
-    `INSERT INTO table_sessions 
-     (restaurant_id, table_id, party_size, day_of_week, hour_of_day)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [restaurant_id, table_id, party_size || 2, new Date().getDay(), new Date().getHours()]
-  );
-  await query(
-    `UPDATE restaurant_tables SET status = 'occupied' WHERE id = $1`,
-    [table_id]
-  );
+      await query(
+        `INSERT INTO table_sessions 
+         (restaurant_id, table_id, party_size, day_of_week, hour_of_day)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [restaurant_id, table_id, party_size || 2, new Date().getDay(), new Date().getHours()]
+      );
+      await query(
+        `UPDATE restaurant_tables SET status = 'occupied' WHERE id = $1`,
+        [table_id]
+      );
 
-  // Find the queue entry assigned to this table and mark as seated
-  const queueEntry = await query(
-    `UPDATE queue_entries 
-     SET status = 'seated', seated_at = NOW()
-     WHERE assigned_table_id = $1 
-     AND status = 'waiting'
-     AND notified_at IS NOT NULL
-     RETURNING id, customer_name`,
-    [table_id]
-  );
+      // Mark queue entry as seated and clear notified_at to prevent no-show timer
+      const queueEntry = await query(
+        `UPDATE queue_entries 
+         SET status = 'seated', seated_at = NOW(), notified_at = NULL
+         WHERE assigned_table_id = $1 
+         AND status = 'waiting'
+         AND notified_at IS NOT NULL
+         RETURNING id, customer_name`,
+        [table_id]
+      );
 
-  // Notify customer they are now seated — triggers Screen 3
-  if (queueEntry.rows.length > 0) {
-    const entry = queueEntry.rows[0];
-    emitToCustomer(entry.id, 'status_updated', {
-      type: 'seated',
-      message: 'You are now seated. Enjoy your meal!'
-    });
-  }
+      if (queueEntry.rows.length > 0) {
+        const entry = queueEntry.rows[0];
+        emitToCustomer(entry.id, 'status_updated', {
+          type: 'seated',
+          message: 'You are now seated. Enjoy your meal!'
+        });
+      }
 
-  emitToRestaurant(restaurant_id, 'table_updated', {
-    type: 'table_occupied',
-    table_id,
-    new_status: 'occupied'
-  });
+      emitToRestaurant(restaurant_id, 'table_updated', {
+        type: 'table_occupied',
+        table_id,
+        new_status: 'occupied'
+      });
 
-  return NextResponse.json({ success: true, table_status: 'occupied' });
-}
       return NextResponse.json({ success: true, table_status: 'occupied' });
     }
 
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
-
-   catch (error) {
+  } catch (error) {
     console.error('Staff table update error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
