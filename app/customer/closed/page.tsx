@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function RestaurantClosed() {
+function ClosedContent() {
   const searchParams = useSearchParams();
   const restaurant_id = searchParams.get('r');
   const [restaurant, setRestaurant] = useState<any>(null);
@@ -68,5 +68,18 @@ export default function RestaurantClosed() {
         Powered by <span style={{ color: 'var(--gold-dim)' }}>Waitless</span>
       </div>
     </div>
+  );
+}
+
+export default function RestaurantClosed() {
+  return (
+    <Suspense fallback={
+      <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 32, height: 32, border: '2px solid var(--border)', borderTop: '2px solid var(--gold)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    }>
+      <ClosedContent />
+    </Suspense>
   );
 }
