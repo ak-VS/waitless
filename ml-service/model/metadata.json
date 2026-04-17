@@ -1,0 +1,21 @@
+{
+  "features": [
+    "hour_of_day",
+    "day_of_week",
+    "party_size",
+    "tables_occupied",
+    "tables_total",
+    "queue_length",
+    "avg_party_size_ahead",
+    "occupancy_rate",
+    "is_peak_hour",
+    "is_weekend"
+  ],
+  "mae": 2.37,
+  "rmse": 3.2,
+  "r2": 0.9861,
+  "n_training_samples": 4000,
+  "real_samples": 2,
+  "model_type": "XGBoostRegressor",
+  "last_trained": "2026-04-17T04:53:16.271701"
+}
