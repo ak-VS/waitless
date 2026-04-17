@@ -1,17 +1,20 @@
 'use client';
 export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
-import \{ useRouter \} from 'next/navigation';
-export const dynamic = 'force-dynamic';
+import { useRouter } from 'next/navigation';
 
 export default function CustomerLanding() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const restaurant_id = searchParams.get('r');
+  const [restaurant_id, setRestaurantId] = useState<string|null>(null);
   const [restaurant, setRestaurant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [gpsError, setGpsError] = useState('');
   const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRestaurantId(params.get('r'));
+  }, []);
 
   useEffect(() => {
     if (!restaurant_id) return;
@@ -29,12 +32,8 @@ export default function CustomerLanding() {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        // GPS check passes — go to floor map
-        router.push(`/customer/floor?r=${restaurant_id}`);
-      },
-      (err) => {
-        // If GPS denied, still allow but warn
+      () => { router.push(`/customer/floor?r=${restaurant_id}`); },
+      () => {
         setGpsError('Location access denied. Please enable GPS to verify you are at the restaurant.');
         setChecking(false);
       },
@@ -43,33 +42,41 @@ export default function CustomerLanding() {
   };
 
   if (!restaurant_id) return (
-    <div style={styles.center}>
-      <div style={styles.errorBox}>
-        <div style={styles.errorIcon}>⚠</div>
-        <div style={styles.errorTitle}>Invalid QR Code</div>
-        <div style={styles.errorMsg}>Please scan the QR code at the restaurant entrance.</div>
+    <div style={s.center}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');`}</style>
+      <div style={s.errorBox}>
+        <div style={s.errorIcon}>⚠</div>
+        <div style={s.errorTitle}>Invalid QR Code</div>
+        <div style={s.errorMsg}>Please scan the QR code at the restaurant entrance.</div>
       </div>
     </div>
   );
 
   if (loading) return (
-    <div style={styles.center}>
-      <div style={styles.spinner}></div>
+    <div style={s.center}>
+      <div style={s.spinner}></div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
   return (
-    <div style={styles.page}>
-      <div style={styles.camSection}>
-        <div style={styles.camBg}></div>
-        <div style={styles.frameWrap}>
-          <div style={styles.frame}>
-            <div style={{...styles.corner, top:0, left:0, borderWidth:'2px 0 0 2px'}}></div>
-            <div style={{...styles.corner, top:0, right:0, borderWidth:'2px 2px 0 0'}}></div>
-            <div style={{...styles.corner, bottom:0, left:0, borderWidth:'0 0 2px 2px'}}></div>
-            <div style={{...styles.corner, bottom:0, right:0, borderWidth:'0 2px 2px 0'}}></div>
-            <div style={styles.scanLine}></div>
-            <div style={styles.qrBox}>
+    <div style={s.page}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');
+        @keyframes scan{0%{top:4px}50%{top:calc(100% - 6px)}100%{top:4px}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+      `}</style>
+
+      <div style={s.camSection}>
+        <div style={s.camBg}></div>
+        <div style={s.frameWrap}>
+          <div style={s.frame}>
+            <div style={{...s.corner, top:0, left:0, borderWidth:'2px 0 0 2px'}}></div>
+            <div style={{...s.corner, top:0, right:0, borderWidth:'2px 2px 0 0'}}></div>
+            <div style={{...s.corner, bottom:0, left:0, borderWidth:'0 0 2px 2px'}}></div>
+            <div style={{...s.corner, bottom:0, right:0, borderWidth:'0 2px 2px 0'}}></div>
+            <div style={s.scanLine}></div>
+            <div style={s.qrBox}>
               <svg viewBox="0 0 104 104" style={{width:'100%',height:'100%'}}>
                 <rect width="104" height="104" fill="white"/>
                 <g fill="#0d0d0d">
@@ -88,39 +95,31 @@ export default function CustomerLanding() {
         </div>
       </div>
 
-      <div style={styles.bottom}>
-        <div style={styles.verifiedBadge}>
-          <span style={styles.dot}></span>
-          <span style={styles.badgeTxt}>Verified restaurant · Live tonight</span>
+      <div style={s.bottom}>
+        <div style={s.verifiedBadge}>
+          <span style={s.dot}></span>
+          <span style={s.badgeTxt}>Verified restaurant · Live tonight</span>
         </div>
-        <div style={styles.restName}>
-          {restaurant?.name || 'Restaurant'}
-        </div>
-        <div style={styles.restAddr}>{restaurant?.address}, {restaurant?.city}</div>
-        {gpsError && <div style={styles.gpsError}>{gpsError}</div>}
-        <button style={styles.primaryBtn} onClick={handleScan} disabled={checking}>
+        <div style={s.restName}>{restaurant?.name || 'Restaurant'}</div>
+        <div style={s.restAddr}>{restaurant?.address}, {restaurant?.city}</div>
+        {gpsError && <div style={s.gpsError}>{gpsError}</div>}
+        <button style={s.primaryBtn} onClick={handleScan} disabled={checking}>
           {checking ? 'Checking location...' : 'Scan & View Floor Map →'}
         </button>
         {gpsError && (
-          <button style={styles.ghostBtn} onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}>
+          <button style={s.ghostBtn} onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}>
             Continue anyway
           </button>
         )}
-        <div style={styles.powered}>Powered by <span style={{color:'#8a6e2f'}}>Waitless</span></div>
+        <div style={s.powered}>Powered by <span style={{color:'var(--gold-dim)'}}>Waitless</span></div>
       </div>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');
-        @keyframes scan { 0%{top:4px} 50%{top:calc(100% - 6px)} 100%{top:4px} }
-        @keyframes spin { to{transform:rotate(360deg)} }
-      `}</style>
     </div>
   );
 }
 
-const styles: any = {
-  page:{background:'#0d0d0d',minHeight:'100vh',display:'flex',flexDirection:'column',fontFamily:"'Jost',sans-serif",fontWeight:300},
-  center:{background:'#0d0d0d',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'},
+const s: any = {
+  page:{background:'var(--bg)',minHeight:'100vh',display:'flex',flexDirection:'column',fontFamily:"'Jost',sans-serif",fontWeight:300},
+  center:{background:'var(--bg)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column'},
   camSection:{flex:1,background:'#000',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',minHeight:'52vw',maxHeight:'58vh'},
   camBg:{position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(201,168,76,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,.03) 1px,transparent 1px)',backgroundSize:'26px 26px'},
   frameWrap:{position:'relative',zIndex:3},
@@ -132,16 +131,15 @@ const styles: any = {
   verifiedBadge:{display:'inline-flex',alignItems:'center',gap:6,background:'rgba(74,158,110,.08)',border:'1px solid #2d6145',borderRadius:2,padding:'5px 10px',marginBottom:12},
   dot:{width:6,height:6,borderRadius:'50%',background:'#4a9e6e',display:'inline-block'},
   badgeTxt:{fontSize:8,letterSpacing:'1.5px',textTransform:'uppercase',color:'#4a9e6e',fontFamily:"'Jost',sans-serif"},
-  restName:{fontFamily:"'Cormorant Garamond',serif",fontSize:'clamp(20px,5.5vw,28px)',fontWeight:300,color:'#e8e0d0',lineHeight:1.1,marginBottom:4},
-  restAddr:{fontSize:9,letterSpacing:'1px',color:'#5a5448',marginBottom:14},
+  restName:{fontFamily:"'Cormorant Garamond',serif",fontSize:'clamp(20px,5.5vw,28px)',fontWeight:300,color:'var(--text)',lineHeight:1.1,marginBottom:4},
+  restAddr:{fontSize:9,letterSpacing:'1px',color:'var(--text3)',marginBottom:14},
   gpsError:{background:'rgba(201,76,76,.1)',border:'1px solid #c94c4c',borderRadius:3,padding:'10px 12px',fontSize:11,color:'#e88080',marginBottom:12,lineHeight:1.5},
   primaryBtn:{width:'100%',background:'#C9A84C',border:'none',color:'#0d0d0d',fontFamily:"'Jost',sans-serif",fontSize:11,letterSpacing:'2.5px',textTransform:'uppercase',padding:14,borderRadius:3,cursor:'pointer',fontWeight:500,marginBottom:8},
-  ghostBtn:{width:'100%',background:'transparent',border:'1px solid #3a342c',color:'#5a5448',fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:'2px',textTransform:'uppercase',padding:11,borderRadius:3,cursor:'pointer',marginBottom:8},
-  powered:{textAlign:'center',fontSize:8,letterSpacing:'2px',textTransform:'uppercase',color:'#5a5448',marginTop:8},
-  errorBox:{background:'#141414',border:'1px solid #2a2620',borderRadius:4,padding:'2rem',textAlign:'center',maxWidth:300},
-  errorIcon:{fontSize:32,marginBottom:12,color:'#c94c4c'},
-  errorTitle:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:'#e8e0d0',marginBottom:8},
-  errorMsg:{fontSize:11,color:'#9e9588',lineHeight:1.6},
-  spinner:{width:32,height:32,border:'2px solid #2a2620',borderTop:'2px solid #C9A84C',borderRadius:'50%',animation:'spin 1s linear infinite'},
+  ghostBtn:{width:'100%',background:'transparent',border:'1px solid var(--border2)',color:'var(--text3)',fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:'2px',textTransform:'uppercase',padding:11,borderRadius:3,cursor:'pointer',marginBottom:8},
+  powered:{textAlign:'center',fontSize:8,letterSpacing:'2px',textTransform:'uppercase',color:'var(--text3)',marginTop:8},
+  errorBox:{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:4,padding:'2rem',textAlign:'center',maxWidth:300},
+  errorIcon:{fontSize:32,marginBottom:12},
+  errorTitle:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:'var(--text)',marginBottom:8},
+  errorMsg:{fontSize:11,color:'var(--text3)',lineHeight:1.6},
+  spinner:{width:32,height:32,border:'2px solid var(--border)',borderTop:'2px solid var(--gold)',borderRadius:'50%',animation:'spin 1s linear infinite'},
 };
-
