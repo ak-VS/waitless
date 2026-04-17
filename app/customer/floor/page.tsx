@@ -1,15 +1,11 @@
 'use client';
-export const dynamic = 'force-dynamic';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ui/ThemeToggle';
-export default function FloorMap() {
+
+function FloorMapInner() {
   const router = useRouter();
   const [restaurant_id, setRestaurantId] = useState<string|null>(null);
-useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  setRestaurantId(params.get('r'));
-}, []);
   const [tables, setTables] = useState<any[]>([]);
   const [restaurant, setRestaurant] = useState<any>(null);
   const [selectedTable, setSelectedTable] = useState<any>(null);
@@ -17,6 +13,11 @@ useEffect(() => {
   const [loading, setLoading] = useState(true);
   const [geoStatus, setGeoStatus] = useState<'checking'|'allowed'|'denied'>('checking');
   const [distance, setDistance] = useState<number|null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRestaurantId(params.get('r'));
+  }, []);
 
   useEffect(() => {
     if (!restaurant_id) return;
@@ -103,10 +104,8 @@ useEffect(() => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');
         @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
-        html,body{height:100%;margin:0;padding:0}
       `}</style>
 
-      {/* Header */}
       <div style={s.header}>
         <div style={s.hTop}>
           <div>
@@ -127,7 +126,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Stats */}
         <div style={s.statsRow}>
           {[
             {v: tables.length, l: 'Tables', c:'var(--text)'},
@@ -142,7 +140,6 @@ useEffect(() => {
           ))}
         </div>
 
-        {/* Zone filters */}
         <div style={s.filterRow}>
           {zones.map(z => (
             <button key={z}
@@ -154,7 +151,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Any table button */}
       <div style={s.anyWrap}>
         <button style={s.anyBtn} onClick={() => goToJoin(null)}>
           <div style={s.anyBtnLeft}>
@@ -165,13 +161,8 @@ useEffect(() => {
         </button>
       </div>
 
-{/* Floor Map */}
       <div style={s.mapArea}>
-        <svg
-          viewBox="0 0 560 490"
-          style={{display:'block',width:'100%',height:'auto',aspectRatio:'560/490'}}
-          preserveAspectRatio="xMidYMid meet"
-        >
+        <svg viewBox="0 0 560 490" style={{display:'block',width:'100%',height:'auto',aspectRatio:'560/490'}} preserveAspectRatio="xMidYMid meet">
           <rect width="560" height="490" fill="var(--map-bg)"/>
           <rect x="0" y="0" width="560" height="90" fill="var(--map-zone-window)" stroke="var(--border)" strokeWidth=".5"/>
           <rect x="0" y="90" width="60" height="260" fill="var(--map-zone-outdoor)" stroke="var(--border)" strokeWidth=".5"/>
@@ -192,42 +183,39 @@ useEffect(() => {
           ))}
           <rect x="210" y="468" width="140" height="14" fill="var(--map-entrance)" stroke="var(--border2)" strokeWidth=".5" rx="2"/>
           <text x="280" y="479" textAnchor="middle" fontSize="6" letterSpacing="2" fill="var(--map-label)" fontFamily="Jost,sans-serif">ENTRANCE</text>
-          {tables
-            .filter(t => zone === 'all' || t.zone === zone)
-            .map(t => {
-              const scale = 2;
-              const x = t.x_pos * scale;
-              const y = t.y_pos * scale;
-              const w = t.width * scale;
-              const h = t.height * scale;
-              const cx = x + w/2;
-              const cy = y + h/2;
-              const isSel = selectedTable?.id === t.id;
-              return (
-                <g key={t.id} style={{cursor:'pointer'}}
-                  onClick={() => setSelectedTable(selectedTable?.id === t.id ? null : t)}>
-                  <rect x={x} y={y} width={w} height={h}
-                    rx={t.seats >= 8 ? 4 : 3}
-                    fill={isSel ? 'rgba(201,168,76,.2)' : 'var(--map-table)'}
-                    stroke={isSel ? '#C9A84C' : t.is_popular ? '#8a6e2f' : 'var(--map-table-border)'}
-                    strokeWidth={isSel ? 2 : 1}
-                  />
-                  <text x={cx} y={cy-3} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={t.seats>=8?11:10} fontFamily="Jost,sans-serif"
-                    fill={isSel?'#C9A84C':'var(--text2)'}>
-                    {t.table_label}
-                  </text>
-                  <text x={cx} y={cy+9} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={8} fontFamily="Jost,sans-serif" fill="var(--text3)">
-                    {t.seats}p
-                  </text>
-                </g>
-              );
+          {tables.filter(t => zone === 'all' || t.zone === zone).map(t => {
+            const scale = 2;
+            const x = t.x_pos * scale;
+            const y = t.y_pos * scale;
+            const w = t.width * scale;
+            const h = t.height * scale;
+            const cx = x + w/2;
+            const cy = y + h/2;
+            const isSel = selectedTable?.id === t.id;
+            return (
+              <g key={t.id} style={{cursor:'pointer'}}
+                onClick={() => setSelectedTable(selectedTable?.id === t.id ? null : t)}>
+                <rect x={x} y={y} width={w} height={h}
+                  rx={t.seats >= 8 ? 4 : 3}
+                  fill={isSel ? 'rgba(201,168,76,.2)' : 'var(--map-table)'}
+                  stroke={isSel ? '#C9A84C' : t.is_popular ? '#8a6e2f' : 'var(--map-table-border)'}
+                  strokeWidth={isSel ? 2 : 1}
+                />
+                <text x={cx} y={cy-3} textAnchor="middle" dominantBaseline="middle"
+                  fontSize={t.seats>=8?11:10} fontFamily="Jost,sans-serif"
+                  fill={isSel?'#C9A84C':'var(--text2)'}>
+                  {t.table_label}
+                </text>
+                <text x={cx} y={cy+9} textAnchor="middle" dominantBaseline="middle"
+                  fontSize={8} fontFamily="Jost,sans-serif" fill="var(--text3)">
+                  {t.seats}p
+                </text>
+              </g>
+            );
           })}
         </svg>
       </div>
 
-      {/* Legend */}
       <div style={s.legend}>
         {[
           {bg:'var(--map-table)', border:'1px solid var(--map-table-border)', label:'Available'},
@@ -241,23 +229,18 @@ useEffect(() => {
         ))}
       </div>
 
-      {/* Tray */}
       <div style={s.tray}>
         {!selectedTable
           ? <div style={s.trayEmpty}>Tap a table — or use "Any Table" above</div>
           : <div style={s.trayInfo}>
               <div style={{flex:1}}>
-                <div style={s.trayName}>
-                  Table {selectedTable.table_label} · {selectedTable.seats}-Seater
-                </div>
+                <div style={s.trayName}>Table {selectedTable.table_label} · {selectedTable.seats}-Seater</div>
                 <div style={s.trayMeta}>
                   {selectedTable.zone.charAt(0).toUpperCase()+selectedTable.zone.slice(1)} Seating
                   {selectedTable.is_popular ? ' · Popular' : ''}
                 </div>
               </div>
-              <button style={s.trayBtn} onClick={() => goToJoin(selectedTable)}>
-                Reserve →
-              </button>
+              <button style={s.trayBtn} onClick={() => goToJoin(selectedTable)}>Reserve →</button>
             </div>
         }
       </div>
@@ -265,205 +248,51 @@ useEffect(() => {
   );
 }
 
+const Loader = () => (
+  <div style={{background:'var(--bg)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
+    <div style={{width:32,height:32,border:'2px solid #2a2620',borderTop:'2px solid #C9A84C',borderRadius:'50%',animation:'spin 1s linear infinite'}}></div>
+    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+  </div>
+);
+
+export default function FloorMap() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <FloorMapInner />
+    </Suspense>
+  );
+}
+
 const s: any = {
-  page:{
-    background:'var(--bg)',
-    display:'flex',
-    flexDirection:'column',
-    width:'100%',
-    minHeight:'100vh',
-    fontFamily:"'Jost',sans-serif",
-    fontWeight:300
-  },
-  header:{
-    padding:'12px 16px 10px',
-    borderBottom:'1px solid var(--border)',
-    background:'var(--bg)',
-    flexShrink:0
-  },
-  hTop:{
-    display:'flex',
-    alignItems:'flex-start',
-    justifyContent:'space-between',
-    marginBottom:10,
-    gap:8
-  },
-  restName:{
-    fontFamily:"'Cormorant Garamond',serif",
-    fontSize:20,
-    color:'var(--text)',
-    lineHeight:1.2
-  },
-  restAddr:{
-    fontSize:9,
-    letterSpacing:'1px',
-    color:'var(--text3)',
-    marginTop:2
-  },
-  liveBadge:{
-    display:'flex',
-    alignItems:'center',
-    gap:5,
-    background:'rgba(74,158,110,.1)',
-    border:'1px solid #2d6145',
-    borderRadius:2,
-    padding:'4px 9px',
-    flexShrink:0
-  },
-  liveDot:{
-    width:6,
-    height:6,
-    borderRadius:'50%',
-    background:'#4a9e6e',
-    display:'inline-block',
-    animation:'p 1.5s ease-in-out infinite'
-  },
-  liveTxt:{
-    fontSize:8,
-    letterSpacing:'1.5px',
-    textTransform:'uppercase',
-    color:'#4a9e6e'
-  },
-  statsRow:{
-    display:'flex',
-    marginBottom:10,
-    background:'var(--bg3)',
-    border:'1px solid var(--border)',
-    borderRadius:3,
-    overflow:'hidden'
-  },
+  page:{background:'var(--bg)',display:'flex',flexDirection:'column',width:'100%',minHeight:'100vh',fontFamily:"'Jost',sans-serif",fontWeight:300},
+  header:{padding:'12px 16px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg)',flexShrink:0},
+  hTop:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:10,gap:8},
+  restName:{fontFamily:"'Cormorant Garamond',serif",fontSize:20,color:'var(--text)',lineHeight:1.2},
+  restAddr:{fontSize:9,letterSpacing:'1px',color:'var(--text3)',marginTop:2},
+  liveBadge:{display:'flex',alignItems:'center',gap:5,background:'rgba(74,158,110,.1)',border:'1px solid #2d6145',borderRadius:2,padding:'4px 9px',flexShrink:0},
+  liveDot:{width:6,height:6,borderRadius:'50%',background:'#4a9e6e',display:'inline-block',animation:'p 1.5s ease-in-out infinite'},
+  liveTxt:{fontSize:8,letterSpacing:'1.5px',textTransform:'uppercase',color:'#4a9e6e'},
+  statsRow:{display:'flex',marginBottom:10,background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:3,overflow:'hidden'},
   stat:{flex:1,padding:'8px 4px',textAlign:'center'},
-  sv:{
-    fontFamily:"'Cormorant Garamond',serif",
-    fontSize:18,
-    lineHeight:1,
-    color:'var(--text)'
-  },
-  sl:{
-    fontSize:6,
-    letterSpacing:'1px',
-    textTransform:'uppercase',
-    color:'var(--text3)',
-    marginTop:2
-  },
-  filterRow:{
-    display:'flex',
-    gap:5,
-    flexWrap:'wrap'
-  },
-  fb:{
-    background:'transparent',
-    border:'1px solid var(--border2)',
-    color:'var(--text3)',
-    fontFamily:"'Jost',sans-serif",
-    fontSize:8,
-    letterSpacing:'1px',
-    textTransform:'uppercase',
-    padding:'5px 10px',
-    borderRadius:2,
-    cursor:'pointer'
-  },
-  fbOn:{
-    background:'rgba(201,168,76,.1)',
-    borderColor:'var(--gold)',
-    color:'var(--gold)'
-  },
-  anyWrap:{
-    padding:'10px 16px',
-    borderBottom:'1px solid var(--border)',
-    flexShrink:0
-  },
-  anyBtn:{
-    width:'100%',
-    background:'rgba(201,168,76,.06)',
-    border:'1px solid #8a6e2f',
-    borderRadius:3,
-    padding:'10px 14px',
-    cursor:'pointer',
-    display:'flex',
-    alignItems:'center',
-    gap:12,
-    textAlign:'left'
-  },
+  sv:{fontFamily:"'Cormorant Garamond',serif",fontSize:18,lineHeight:1,color:'var(--text)'},
+  sl:{fontSize:6,letterSpacing:'1px',textTransform:'uppercase',color:'var(--text3)',marginTop:2},
+  filterRow:{display:'flex',gap:5,flexWrap:'wrap'},
+  fb:{background:'transparent',border:'1px solid var(--border2)',color:'var(--text3)',fontFamily:"'Jost',sans-serif",fontSize:8,letterSpacing:'1px',textTransform:'uppercase',padding:'5px 10px',borderRadius:2,cursor:'pointer'},
+  fbOn:{background:'rgba(201,168,76,.1)',borderColor:'var(--gold)',color:'var(--gold)'},
+  anyWrap:{padding:'10px 16px',borderBottom:'1px solid var(--border)',flexShrink:0},
+  anyBtn:{width:'100%',background:'rgba(201,168,76,.06)',border:'1px solid #8a6e2f',borderRadius:3,padding:'10px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:12,textAlign:'left'},
   anyBtnLeft:{flex:1},
-  anyBtnTitle:{
-    fontSize:12,
-    color:'var(--gold)',
-    fontFamily:"'Jost',sans-serif",
-    fontWeight:500,
-    letterSpacing:'.5px',
-    marginBottom:2
-  },
+  anyBtnTitle:{fontSize:12,color:'var(--gold)',fontFamily:"'Jost',sans-serif",fontWeight:500,letterSpacing:'.5px',marginBottom:2},
   anyBtnSub:{fontSize:9,color:'var(--text3)',letterSpacing:'.5px'},
   anyArrow:{fontSize:18,color:'var(--gold)'},
-  mapArea:{
-    width:'100%',
-    background:'var(--map-bg)',
-    flexShrink:0,
-    lineHeight:0,
-  fontSize:0,
-  },
-  legend:{
-    display:'flex',
-    gap:12,
-    padding:'8px 16px',
-    borderTop:'1px solid var(--border)',
-    flexWrap:'wrap',
-    background:'var(--bg)',
-    flexShrink:0
-  },
-  leg:{
-    display:'flex',
-    alignItems:'center',
-    gap:5,
-    fontSize:7,
-    letterSpacing:'1px',
-    textTransform:'uppercase',
-    color:'var(--text3)'
-  },
+  mapArea:{width:'100%',background:'var(--map-bg)',flexShrink:0,lineHeight:0,fontSize:0},
+  legend:{display:'flex',gap:12,padding:'8px 16px',borderTop:'1px solid var(--border)',flexWrap:'wrap',background:'var(--bg)',flexShrink:0},
+  leg:{display:'flex',alignItems:'center',gap:5,fontSize:7,letterSpacing:'1px',textTransform:'uppercase',color:'var(--text3)'},
   ld:{width:10,height:10,borderRadius:1,flexShrink:0},
-  tray:{
-    padding:'12px 16px 24px',
-    borderTop:'1px solid var(--border)',
-    background:'var(--bg)',
-    flexShrink:0,
-    minHeight:64
-  },
-  trayEmpty:{
-    fontSize:9,
-    letterSpacing:'1.5px',
-    textTransform:'uppercase',
-    color:'var(--text3)',
-    textAlign:'center',
-    padding:'8px 0'
-  },
+  tray:{padding:'12px 16px 24px',borderTop:'1px solid var(--border)',background:'var(--bg)',flexShrink:0,minHeight:64},
+  trayEmpty:{fontSize:9,letterSpacing:'1.5px',textTransform:'uppercase',color:'var(--text3)',textAlign:'center',padding:'8px 0'},
   trayInfo:{display:'flex',alignItems:'center',gap:12},
-  trayName:{
-    fontFamily:"'Cormorant Garamond',serif",
-    fontSize:19,
-    color:'var(--text)',
-    flex:1
-  },
-  trayMeta:{
-    fontSize:8,
-    letterSpacing:'1px',
-    textTransform:'uppercase',
-    color:'var(--text3)',
-    marginTop:1
-  },
-  trayBtn:{
-    background:'var(--gold)',
-    border:'none',
-    color:'#0d0d0d',
-    fontFamily:"'Jost',sans-serif",
-    fontSize:9,
-    letterSpacing:'2px',
-    textTransform:'uppercase',
-    padding:'11px 16px',
-    borderRadius:2,
-    cursor:'pointer',
-    fontWeight:500,
-    whiteSpace:'nowrap'
-  },
+  trayName:{fontFamily:"'Cormorant Garamond',serif",fontSize:19,color:'var(--text)',flex:1},
+  trayMeta:{fontSize:8,letterSpacing:'1px',textTransform:'uppercase',color:'var(--text3)',marginTop:1},
+  trayBtn:{background:'var(--gold)',border:'none',color:'#0d0d0d',fontFamily:"'Jost',sans-serif",fontSize:9,letterSpacing:'2px',textTransform:'uppercase',padding:'11px 16px',borderRadius:2,cursor:'pointer',fontWeight:500,whiteSpace:'nowrap'},
 };
-

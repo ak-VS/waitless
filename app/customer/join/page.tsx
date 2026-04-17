@@ -1,10 +1,9 @@
 'use client';
-export const dynamic = 'force-dynamic';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 
-export default function JoinQueue() {
+function JoinQueueInner() {
   const router = useRouter();
   const [restaurant_id, setRestaurantId] = useState<string|null>(null);
   const [table_id, setTableId] = useState<string|null>(null);
@@ -49,11 +48,7 @@ export default function JoinQueue() {
         const res = await fetch('/api/geofence', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            restaurant_id,
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude
-          })
+          body: JSON.stringify({ restaurant_id, lat: pos.coords.latitude, lng: pos.coords.longitude })
         });
         const data = await res.json();
         if (!data.allowed) {
@@ -67,8 +62,7 @@ export default function JoinQueue() {
   const handleSubmit = async () => {
     if (!name.trim()) { setError('Please enter your name'); return; }
     if (!partySize) { setError('Please select party size'); return; }
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const res = await fetch('/api/queue/join', {
         method: 'POST',
@@ -98,7 +92,6 @@ export default function JoinQueue() {
   return (
     <div style={s.page}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');`}</style>
-
       <div style={s.header}>
         <div>
           <div style={s.restName}>{restaurant?.name || '...'}</div>
@@ -106,13 +99,10 @@ export default function JoinQueue() {
         </div>
         <ThemeToggle />
       </div>
-
       <div style={s.body}>
-        <div style={s.backBtn}
-          onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}>
+        <div style={s.backBtn} onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}>
           ← Back to floor map
         </div>
-
         {(table_label && !is_any) && (
           <div style={s.tableCard}>
             <div style={s.tcLeft}>
@@ -120,13 +110,9 @@ export default function JoinQueue() {
               <div style={s.tcName}>Table {table_label} · {table_seats}-Seater</div>
               <div style={s.tcZone}>{table_zone} seating</div>
             </div>
-            <button style={s.tcChange}
-              onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}>
-              Change
-            </button>
+            <button style={s.tcChange} onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}>Change</button>
           </div>
         )}
-
         {is_any && (
           <div style={s.tableCard}>
             <div style={s.tcLeft}>
@@ -134,64 +120,47 @@ export default function JoinQueue() {
               <div style={s.tcName}>Any Available Table</div>
               <div style={s.tcZone}>Best fit will be assigned</div>
             </div>
-            <button style={s.tcChange}
-              onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}>
-              Change
-            </button>
+            <button style={s.tcChange} onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}>Change</button>
           </div>
         )}
-
         <div style={s.formTitle}>Join the Queue</div>
         <div style={s.formSub}>2 fields · 10 seconds</div>
-
         <label style={s.label}>Your name</label>
-        <input
-          style={s.input}
-          placeholder="e.g. Aryan Sharma"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          autoComplete="name"
-        />
-
+        <input style={s.input} placeholder="e.g. Aryan Sharma" value={name}
+          onChange={e => setName(e.target.value)} autoComplete="name"/>
         <label style={s.label}>Party size</label>
         <div style={s.paxRow}>
           {[1,2,3,4,5,6,8,10].map(n => (
-            <button key={n}
-              style={{...s.paxBtn, ...(partySize === n ? s.paxOn : {})}}
-              onClick={() => setPartySize(n)}>
-              {n}
-            </button>
+            <button key={n} style={{...s.paxBtn, ...(partySize===n ? s.paxOn : {})}}
+              onClick={() => setPartySize(n)}>{n}</button>
           ))}
         </div>
-
-        <label style={s.label}>
-          Occasion <span style={{color:'var(--text3)',fontSize:9}}>(optional)</span>
-        </label>
-        <input
-          style={s.input}
-          placeholder="Birthday, anniversary, business lunch…"
-          value={occasion}
-          onChange={e => setOccasion(e.target.value)}
-        />
-
+        <label style={s.label}>Occasion <span style={{color:'var(--text3)',fontSize:9}}>(optional)</span></label>
+        <input style={s.input} placeholder="Birthday, anniversary, business lunch…"
+          value={occasion} onChange={e => setOccasion(e.target.value)}/>
         {error && <div style={s.errorBox}>{error}</div>}
-
-        <button
-          style={{...s.submitBtn, opacity: loading ? .7 : 1}}
-          onClick={handleSubmit}
-          disabled={loading}>
+        <button style={{...s.submitBtn, opacity: loading ? .7 : 1}} onClick={handleSubmit} disabled={loading}>
           {loading ? 'Joining queue...' : 'Join Queue →'}
         </button>
-
-        <div style={s.note}>
-          You can roam freely after joining. We'll notify you when your table is ready.
-        </div>
+        <div style={s.note}>You can roam freely after joining. We'll notify you when your table is ready.</div>
       </div>
-
-      <div style={s.powered}>
-        Powered by <span style={{color:'var(--gold-dim)'}}>Waitless</span>
-      </div>
+      <div style={s.powered}>Powered by <span style={{color:'var(--gold-dim)'}}>Waitless</span></div>
     </div>
+  );
+}
+
+const Loader = () => (
+  <div style={{background:'var(--bg)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
+    <div style={{width:32,height:32,border:'2px solid #2a2620',borderTop:'2px solid #C9A84C',borderRadius:'50%',animation:'spin 1s linear infinite'}}></div>
+    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+  </div>
+);
+
+export default function JoinQueue() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <JoinQueueInner />
+    </Suspense>
   );
 }
 

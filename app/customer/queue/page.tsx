@@ -1,11 +1,10 @@
 'use client';
-export const dynamic = 'force-dynamic';
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { io } from 'socket.io-client';
 
-export default function QueueToken() {
+function QueueTokenInner() {
   const router = useRouter();
   const [queue_entry_id, setQueueEntryId] = useState<string|null>(null);
   const [restaurant_id, setRestaurantId] = useState<string|null>(null);
@@ -25,8 +24,7 @@ export default function QueueToken() {
   const [onMyWayDone, setOnMyWayDone] = useState(false);
 
   const triggerToast = (msg: string) => {
-    setToastMsg(msg);
-    setShowToast(true);
+    setToastMsg(msg); setShowToast(true);
     setTimeout(() => setShowToast(false), 4000);
   };
 
@@ -37,12 +35,8 @@ export default function QueueToken() {
     if (json.success) {
       if (json.status === 'skipped') { setSkipped(true); return; }
       setData((prev: any) => {
-        if (prev && json.position < prev.position) {
-          triggerToast(`Queue moved — you're now position ${json.position}`);
-        }
-        if (json.position <= 2 && (!prev || prev.position > 2)) {
-          triggerToast('Your table is almost ready — head to the entrance!');
-        }
+        if (prev && json.position < prev.position) triggerToast(`Queue moved — you're now position ${json.position}`);
+        if (json.position <= 2 && (!prev || prev.position > 2)) triggerToast('Your table is almost ready — head to the entrance!');
         return json;
       });
     }
@@ -50,8 +44,7 @@ export default function QueueToken() {
 
   useEffect(() => {
     if (!restaurant_id) return;
-    fetch(`/api/restaurant/info?id=${restaurant_id}`)
-      .then(r => r.json()).then(d => setRestaurant(d.restaurant));
+    fetch(`/api/restaurant/info?id=${restaurant_id}`).then(r => r.json()).then(d => setRestaurant(d.restaurant));
   }, [restaurant_id]);
 
   useEffect(() => {
@@ -66,16 +59,10 @@ export default function QueueToken() {
     const socket = io(socketUrl, { transports: ['websocket'] });
     socket.on('connect', () => socket.emit('join_queue', queue_entry_id));
     socket.on('status_updated', (update: any) => {
-      if (update.type === 'table_ready') {
-        triggerToast('Your table is ready! Head to the entrance now.');
-        fetchStatus();
-      } else if (update.type === 'skipped') {
-        setSkipped(true);
-      } else if (update.type === 'seated') {
-        fetchStatus();
-      } else if (update.type === 'removed') {
-        router.push(`/q/${restaurant_id}`);
-      }
+      if (update.type === 'table_ready') { triggerToast('Your table is ready! Head to the entrance now.'); fetchStatus(); }
+      else if (update.type === 'skipped') { setSkipped(true); }
+      else if (update.type === 'seated') { fetchStatus(); }
+      else if (update.type === 'removed') { router.push(`/q/${restaurant_id}`); }
     });
     return () => { socket.disconnect(); };
   }, [queue_entry_id, fetchStatus, router, restaurant_id]);
@@ -118,105 +105,96 @@ export default function QueueToken() {
     </div>
   );
 
-  if (data?.status === 'seated') {
-    return (
-      <div style={s.centerPage}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');`}</style>
-        <div style={s.bigRing}>
+  if (data?.status === 'seated') return (
+    <div style={s.centerPage}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');`}</style>
+      <div style={s.bigRing}>
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M6 16l7 7 13-13" stroke="#4a9e6e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      <div style={s.bigTitle}>Enjoy your meal</div>
+      <div style={s.bigSub}>You're all set, {data.customer_name}.</div>
+      <div style={{...s.infoCard, marginTop:20}}>
+        <div style={s.infoLabel}>Restaurant</div>
+        <div style={s.infoVal}>{restaurant?.name}</div>
+      </div>
+      <div style={{fontSize:10,color:'var(--text3)',textAlign:'center',lineHeight:1.7,marginTop:20,letterSpacing:'.3px'}}>
+        Thank you for using Waitless. We hope you have a great meal!
+      </div>
+      <div style={s.powered}>Powered by <span style={{color:'var(--gold-dim)'}}>Waitless</span></div>
+    </div>
+  );
+
+  if (data?.notified_at && data?.status === 'waiting') return (
+    <div style={s.centerPage}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+      `}</style>
+      <div style={{...s.toast, transform: showToast ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(-120px)'}}>
+        <span>🔔</span><span style={{fontSize:11}}>{toastMsg}</span>
+      </div>
+      <div style={s.header}>
+        <div><div style={s.restName}>{restaurant?.name}</div><div style={s.restAddr}>{restaurant?.city}</div></div>
+        <ThemeToggle />
+      </div>
+      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'2rem 1.5rem'}}>
+        <div style={{width:72,height:72,borderRadius:'50%',background:'rgba(74,158,110,.1)',border:'2px solid #4a9e6e',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20,animation:'bounce 1.5s ease-in-out infinite'}}>
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-            <path d="M6 16l7 7 13-13" stroke="#4a9e6e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4z" stroke="#4a9e6e" strokeWidth="1.5"/>
+            <path d="M16 10v6l4 4" stroke="#4a9e6e" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </div>
-        <div style={s.bigTitle}>Enjoy your meal</div>
-        <div style={s.bigSub}>You're all set, {data.customer_name}.</div>
-        <div style={{...s.infoCard, marginTop:20}}>
-          <div style={s.infoLabel}>Restaurant</div>
-          <div style={s.infoVal}>{restaurant?.name}</div>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:32,color:'var(--text)',textAlign:'center',marginBottom:8}}>Your table is ready!</div>
+        <div style={{fontSize:12,color:'var(--text2)',textAlign:'center',lineHeight:1.7,marginBottom:28,letterSpacing:'.3px'}}>
+          Please head to the restaurant entrance now. Show your token to the staff.
         </div>
-        <div style={{fontSize:10,color:'var(--text3)',textAlign:'center',lineHeight:1.7,marginTop:20,letterSpacing:'.3px'}}>
-          Thank you for using Waitless. We hope you have a great meal!
+        <div style={{background:'var(--bg2)',border:'1px solid var(--gold)',borderRadius:8,padding:'20px 32px',textAlign:'center',marginBottom:24,width:'100%'}}>
+          <div style={{fontSize:8,letterSpacing:'3px',textTransform:'uppercase',color:'var(--gold-dim)',marginBottom:6}}>Your token</div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:56,letterSpacing:6,color:'var(--gold)',lineHeight:1}}>{data.token}</div>
+          <div style={{fontSize:9,color:'var(--text3)',marginTop:6,letterSpacing:'1px'}}>Show this to the staff at the entrance</div>
         </div>
-        <div style={s.powered}>Powered by <span style={{color:'var(--gold-dim)'}}>Waitless</span></div>
+        {!onMyWayDone ? (
+          <button onClick={handleImOnMyWay}
+            style={{width:'100%',background:'var(--gold)',border:'none',color:'#0d0d0d',fontFamily:"'Jost',sans-serif",fontSize:11,letterSpacing:'2px',textTransform:'uppercase',padding:14,borderRadius:3,cursor:'pointer',fontWeight:500,marginBottom:10}}>
+            I'm on my way →
+          </button>
+        ) : (
+          <div style={{width:'100%',background:'rgba(74,158,110,.1)',border:'1px solid #2d6145',borderRadius:3,padding:14,textAlign:'center',fontSize:10,color:'#4a9e6e',letterSpacing:'1.5px',textTransform:'uppercase',marginBottom:10}}>
+            ✓ Timer extended — we'll wait for you
+          </div>
+        )}
+        <div style={{fontSize:9,color:'var(--text3)',textAlign:'center',lineHeight:1.6,letterSpacing:'.3px'}}>
+          Didn't make it? The staff can reassign your table if needed.
+        </div>
       </div>
-    );
-  }
+      <div style={s.powered}>Powered by <span style={{color:'var(--gold-dim)'}}>Waitless</span></div>
+    </div>
+  );
 
-  if (data?.notified_at && data?.status === 'waiting') {
-    return (
-      <div style={s.centerPage}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');
-          @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-          @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-        `}</style>
-        <div style={{...s.toast, transform: showToast ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(-120px)'}}>
-          <span>🔔</span><span style={{fontSize:11}}>{toastMsg}</span>
-        </div>
-        <div style={s.header}>
-          <div>
-            <div style={s.restName}>{restaurant?.name}</div>
-            <div style={s.restAddr}>{restaurant?.city}</div>
-          </div>
-          <ThemeToggle />
-        </div>
-        <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'2rem 1.5rem'}}>
-          <div style={{width:72,height:72,borderRadius:'50%',background:'rgba(74,158,110,.1)',border:'2px solid #4a9e6e',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20,animation:'bounce 1.5s ease-in-out infinite'}}>
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4z" stroke="#4a9e6e" strokeWidth="1.5"/>
-              <path d="M16 10v6l4 4" stroke="#4a9e6e" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:32,color:'var(--text)',textAlign:'center',marginBottom:8}}>Your table is ready!</div>
-          <div style={{fontSize:12,color:'var(--text2)',textAlign:'center',lineHeight:1.7,marginBottom:28,letterSpacing:'.3px'}}>
-            Please head to the restaurant entrance now. Show your token to the staff.
-          </div>
-          <div style={{background:'var(--bg2)',border:'1px solid var(--gold)',borderRadius:8,padding:'20px 32px',textAlign:'center',marginBottom:24,width:'100%'}}>
-            <div style={{fontSize:8,letterSpacing:'3px',textTransform:'uppercase',color:'var(--gold-dim)',marginBottom:6}}>Your token</div>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:56,letterSpacing:6,color:'var(--gold)',lineHeight:1}}>{data.token}</div>
-            <div style={{fontSize:9,color:'var(--text3)',marginTop:6,letterSpacing:'1px'}}>Show this to the staff at the entrance</div>
-          </div>
-          {!onMyWayDone ? (
-            <button onClick={handleImOnMyWay}
-              style={{width:'100%',background:'var(--gold)',border:'none',color:'#0d0d0d',fontFamily:"'Jost',sans-serif",fontSize:11,letterSpacing:'2px',textTransform:'uppercase',padding:14,borderRadius:3,cursor:'pointer',fontWeight:500,marginBottom:10}}>
-              I'm on my way →
-            </button>
-          ) : (
-            <div style={{width:'100%',background:'rgba(74,158,110,.1)',border:'1px solid #2d6145',borderRadius:3,padding:14,textAlign:'center',fontSize:10,color:'#4a9e6e',letterSpacing:'1.5px',textTransform:'uppercase',marginBottom:10}}>
-              ✓ Timer extended — we'll wait for you
-            </div>
-          )}
-          <div style={{fontSize:9,color:'var(--text3)',textAlign:'center',lineHeight:1.6,letterSpacing:'.3px'}}>
-            Didn't make it? The staff can reassign your table if needed.
-          </div>
-        </div>
-        <div style={s.powered}>Powered by <span style={{color:'var(--gold-dim)'}}>Waitless</span></div>
+  if (skipped) return (
+    <div style={s.centerPage}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');`}</style>
+      <div style={{width:52,height:52,borderRadius:'50%',background:'rgba(201,76,76,.1)',border:'1px solid #c94c4c',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16}}>
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M6 6l10 10M16 6L6 16" stroke="#c94c4c" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
       </div>
-    );
-  }
-
-  if (skipped) {
-    return (
-      <div style={s.centerPage}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');`}</style>
-        <div style={{width:52,height:52,borderRadius:'50%',background:'rgba(201,76,76,.1)',border:'1px solid #c94c4c',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16}}>
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-            <path d="M6 6l10 10M16 6L6 16" stroke="#c94c4c" strokeWidth="1.8" strokeLinecap="round"/>
-          </svg>
-        </div>
-        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,color:'var(--text)',marginBottom:8,textAlign:'center'}}>You were skipped</div>
-        <div style={{fontSize:11,color:'var(--text3)',textAlign:'center',lineHeight:1.7,marginBottom:24}}>
-          You didn't respond in time. If you're still at the restaurant, you can rejoin the queue.
-        </div>
-        <button onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}
-          style={{width:'100%',background:'var(--gold)',border:'none',color:'#0d0d0d',fontFamily:"'Jost',sans-serif",fontSize:11,letterSpacing:'2px',textTransform:'uppercase',padding:14,borderRadius:3,cursor:'pointer',fontWeight:500,marginBottom:8}}>
-          Rejoin Queue →
-        </button>
-        <button onClick={() => router.push(`/q/${restaurant_id}`)}
-          style={{width:'100%',background:'transparent',border:'1px solid var(--border2)',color:'var(--text3)',fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:'2px',textTransform:'uppercase',padding:12,borderRadius:3,cursor:'pointer'}}>
-          Leave
-        </button>
+      <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,color:'var(--text)',marginBottom:8,textAlign:'center'}}>You were skipped</div>
+      <div style={{fontSize:11,color:'var(--text3)',textAlign:'center',lineHeight:1.7,marginBottom:24}}>
+        You didn't respond in time. If you're still at the restaurant, you can rejoin the queue.
       </div>
-    );
-  }
+      <button onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}
+        style={{width:'100%',background:'var(--gold)',border:'none',color:'#0d0d0d',fontFamily:"'Jost',sans-serif",fontSize:11,letterSpacing:'2px',textTransform:'uppercase',padding:14,borderRadius:3,cursor:'pointer',fontWeight:500,marginBottom:8}}>
+        Rejoin Queue →
+      </button>
+      <button onClick={() => router.push(`/q/${restaurant_id}`)}
+        style={{width:'100%',background:'transparent',border:'1px solid var(--border2)',color:'var(--text3)',fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:'2px',textTransform:'uppercase',padding:12,borderRadius:3,cursor:'pointer'}}>
+        Leave
+      </button>
+    </div>
+  );
 
   if (!data) return null;
 
@@ -234,10 +212,7 @@ export default function QueueToken() {
         <span>🔔</span><span style={{fontSize:11}}>{toastMsg}</span>
       </div>
       <div style={s.header}>
-        <div>
-          <div style={s.restName}>{restaurant?.name}</div>
-          <div style={s.restAddr}>{restaurant?.city}</div>
-        </div>
+        <div><div style={s.restName}>{restaurant?.name}</div><div style={s.restAddr}>{restaurant?.city}</div></div>
         <ThemeToggle />
       </div>
       <div style={s.body}>
@@ -291,8 +266,7 @@ export default function QueueToken() {
             <div style={s.tokenLabel}>Joined at</div>
             <div style={s.tokenTime}>
               {new Date(data.joined_at).toLocaleTimeString('en-IN', {
-                hour: '2-digit', minute: '2-digit', hour12: true,
-                timeZone: 'Asia/Kolkata'
+                hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata'
               })}
             </div>
           </div>
@@ -311,6 +285,21 @@ export default function QueueToken() {
       </div>
       <div style={s.powered}>Powered by <span style={{color:'var(--gold-dim)'}}>Waitless</span></div>
     </div>
+  );
+}
+
+const Loader = () => (
+  <div style={{background:'var(--bg)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
+    <div style={{width:32,height:32,border:'2px solid #2a2620',borderTop:'2px solid #C9A84C',borderRadius:'50%',animation:'spin 1s linear infinite'}}></div>
+    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+  </div>
+);
+
+export default function QueueToken() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <QueueTokenInner />
+    </Suspense>
   );
 }
 
