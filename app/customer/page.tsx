@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import \{ useRouter \} from 'next/navigation';
 export const dynamic = 'force-dynamic';
 
 export default function CustomerLanding() {
@@ -144,3 +144,4 @@ const styles: any = {
   errorMsg:{fontSize:11,color:'#9e9588',lineHeight:1.6},
   spinner:{width:32,height:32,border:'2px solid #2a2620',borderTop:'2px solid #C9A84C',borderRadius:'50%',animation:'spin 1s linear infinite'},
 };
+

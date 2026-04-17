@@ -1,16 +1,20 @@
 'use client';
 export const dynamic = 'force-dynamic';
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { io } from 'socket.io-client';
-export const dynamic = 'force-dynamic';
 
 export default function QueueToken() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const queue_entry_id = searchParams.get('id');
-  const restaurant_id = searchParams.get('r');
+  const [queue_entry_id, setQueueEntryId] = useState<string|null>(null);
+  const [restaurant_id, setRestaurantId] = useState<string|null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setQueueEntryId(params.get('id'));
+    setRestaurantId(params.get('r'));
+  }, []);
 
   const [data, setData] = useState<any>(null);
   const [restaurant, setRestaurant] = useState<any>(null);
@@ -19,7 +23,6 @@ export default function QueueToken() {
   const [skipped, setSkipped] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [onMyWayDone, setOnMyWayDone] = useState(false);
-  const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
@@ -59,7 +62,8 @@ export default function QueueToken() {
 
   useEffect(() => {
     if (!queue_entry_id) return;
-    const socket = io('http://localhost:3000', { transports: ['websocket'] });
+    const socketUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const socket = io(socketUrl, { transports: ['websocket'] });
     socket.on('connect', () => socket.emit('join_queue', queue_entry_id));
     socket.on('status_updated', (update: any) => {
       if (update.type === 'table_ready') {
@@ -67,8 +71,8 @@ export default function QueueToken() {
         fetchStatus();
       } else if (update.type === 'skipped') {
         setSkipped(true);
-        } else if (update.type === 'seated') {
-    fetchStatus(); // Will show Screen 3
+      } else if (update.type === 'seated') {
+        fetchStatus();
       } else if (update.type === 'removed') {
         router.push(`/q/${restaurant_id}`);
       }
@@ -107,16 +111,14 @@ export default function QueueToken() {
     triggerToast('Got it! Your timer has been extended by 3 minutes.');
   };
 
-  // Loading
-  if (!data) return (
+  if (!data && !skipped) return (
     <div style={{background:'var(--bg)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div style={{width:32,height:32,border:'2px solid var(--border)',borderTop:'2px solid var(--gold)',borderRadius:'50%',animation:'spin 1s linear infinite'}}></div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
-  // Screen 3 — Seated / Enjoy your meal
-  if (data.status === 'seated') {
+  if (data?.status === 'seated') {
     return (
       <div style={s.centerPage}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');`}</style>
@@ -128,10 +130,6 @@ export default function QueueToken() {
         <div style={s.bigTitle}>Enjoy your meal</div>
         <div style={s.bigSub}>You're all set, {data.customer_name}.</div>
         <div style={{...s.infoCard, marginTop:20}}>
-          <div style={s.infoLabel}>Your table</div>
-          <div style={s.infoVal}>{data.assigned_table_id ? 'Table assigned' : 'Assigned by staff'}</div>
-        </div>
-        <div style={s.infoCard}>
           <div style={s.infoLabel}>Restaurant</div>
           <div style={s.infoVal}>{restaurant?.name}</div>
         </div>
@@ -143,22 +141,16 @@ export default function QueueToken() {
     );
   }
 
-  // Screen 2 — Notified / Table Ready
-  if (data.notified_at && data.status === 'waiting') {
+  if (data?.notified_at && data?.status === 'waiting') {
     return (
       <div style={s.centerPage}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');
           @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
           @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
         `}</style>
-
-        {/* Toast */}
         <div style={{...s.toast, transform: showToast ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(-120px)'}}>
-          <span>🔔</span>
-          <span style={{fontSize:11}}>{toastMsg}</span>
+          <span>🔔</span><span style={{fontSize:11}}>{toastMsg}</span>
         </div>
-
-        {/* Header */}
         <div style={s.header}>
           <div>
             <div style={s.restName}>{restaurant?.name}</div>
@@ -166,40 +158,24 @@ export default function QueueToken() {
           </div>
           <ThemeToggle />
         </div>
-
         <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'2rem 1.5rem'}}>
-          {/* Animated icon */}
-          <div style={{
-            width:72,height:72,borderRadius:'50%',
-            background:'rgba(74,158,110,.1)',
-            border:'2px solid #4a9e6e',
-            display:'flex',alignItems:'center',justifyContent:'center',
-            marginBottom:20,animation:'bounce 1.5s ease-in-out infinite'
-          }}>
+          <div style={{width:72,height:72,borderRadius:'50%',background:'rgba(74,158,110,.1)',border:'2px solid #4a9e6e',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20,animation:'bounce 1.5s ease-in-out infinite'}}>
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
               <path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4z" stroke="#4a9e6e" strokeWidth="1.5"/>
               <path d="M16 10v6l4 4" stroke="#4a9e6e" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </div>
-
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:32,color:'var(--text)',textAlign:'center',marginBottom:8}}>
-            Your table is ready!
-          </div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:32,color:'var(--text)',textAlign:'center',marginBottom:8}}>Your table is ready!</div>
           <div style={{fontSize:12,color:'var(--text2)',textAlign:'center',lineHeight:1.7,marginBottom:28,letterSpacing:'.3px'}}>
             Please head to the restaurant entrance now. Show your token to the staff.
           </div>
-
-          {/* Token */}
           <div style={{background:'var(--bg2)',border:'1px solid var(--gold)',borderRadius:8,padding:'20px 32px',textAlign:'center',marginBottom:24,width:'100%'}}>
             <div style={{fontSize:8,letterSpacing:'3px',textTransform:'uppercase',color:'var(--gold-dim)',marginBottom:6}}>Your token</div>
             <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:56,letterSpacing:6,color:'var(--gold)',lineHeight:1}}>{data.token}</div>
             <div style={{fontSize:9,color:'var(--text3)',marginTop:6,letterSpacing:'1px'}}>Show this to the staff at the entrance</div>
           </div>
-
-          {/* I'm on my way button */}
           {!onMyWayDone ? (
-            <button
-              onClick={handleImOnMyWay}
+            <button onClick={handleImOnMyWay}
               style={{width:'100%',background:'var(--gold)',border:'none',color:'#0d0d0d',fontFamily:"'Jost',sans-serif",fontSize:11,letterSpacing:'2px',textTransform:'uppercase',padding:14,borderRadius:3,cursor:'pointer',fontWeight:500,marginBottom:10}}>
               I'm on my way →
             </button>
@@ -208,18 +184,15 @@ export default function QueueToken() {
               ✓ Timer extended — we'll wait for you
             </div>
           )}
-
           <div style={{fontSize:9,color:'var(--text3)',textAlign:'center',lineHeight:1.6,letterSpacing:'.3px'}}>
             Didn't make it? The staff can reassign your table if needed.
           </div>
         </div>
-
         <div style={s.powered}>Powered by <span style={{color:'var(--gold-dim)'}}>Waitless</span></div>
       </div>
     );
   }
 
-  // Screen 1 — Skipped
   if (skipped) {
     return (
       <div style={s.centerPage}>
@@ -245,7 +218,8 @@ export default function QueueToken() {
     );
   }
 
-  // Screen 1 — Waiting
+  if (!data) return null;
+
   const pct = Math.max(5, Math.round((1 - (data.position / data.total_waiting)) * 100));
   const isAlmost = data.position <= 2;
   const isClose = data.position <= 4;
@@ -256,12 +230,9 @@ export default function QueueToken() {
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
       `}</style>
-
       <div style={{...s.toast, transform: showToast ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(-120px)'}}>
-        <span>🔔</span>
-        <span style={{fontSize:11}}>{toastMsg}</span>
+        <span>🔔</span><span style={{fontSize:11}}>{toastMsg}</span>
       </div>
-
       <div style={s.header}>
         <div>
           <div style={s.restName}>{restaurant?.name}</div>
@@ -269,7 +240,6 @@ export default function QueueToken() {
         </div>
         <ThemeToggle />
       </div>
-
       <div style={s.body}>
         <div style={{...s.waitHero, ...(isAlmost ? s.waitHeroGreen : {})}}>
           <div style={s.waitLabel}>Estimated wait</div>
@@ -290,7 +260,6 @@ export default function QueueToken() {
             </div>
           </div>
         </div>
-
         <div style={s.statsRow}>
           <div style={{...s.stat, borderRight:'1px solid var(--border)'}}>
             <div style={{...s.sv, color: isAlmost ? '#4a9e6e' : 'var(--text)'}}>{data.position}</div>
@@ -305,7 +274,6 @@ export default function QueueToken() {
             <div style={s.sl}>Guests</div>
           </div>
         </div>
-
         <div style={{...s.liveBar, ...(isAlmost ? s.liveBarGreen : {})}}>
           <span style={{...s.liveDot, background:'#4a9e6e'}}></span>
           <span style={s.liveText}>
@@ -314,7 +282,6 @@ export default function QueueToken() {
               : "You can roam freely. We'll notify you when ready."}
           </span>
         </div>
-
         <div style={s.tokenRow}>
           <div style={s.tokenLeft}>
             <div style={s.tokenLabel}>Queue token</div>
@@ -336,15 +303,12 @@ export default function QueueToken() {
             </div>
           )}
         </div>
-
         <div style={s.note}>This page auto-updates every 15 seconds. No need to refresh.</div>
-
         <button onClick={handleLeaveQueue} disabled={leaving}
-          style={{width:'100%',background:'transparent',border:'1px solid var(--border2)',color:'var(--text3)',fontFamily:"'Jost',sans-serif",fontSize:9,letterSpacing:'2px',textTransform:'uppercase',padding:11,borderRadius:3,cursor:'pointer',marginTop:12,opacity:leaving?.5:1}}>
+          style={{width:'100%',background:'transparent',border:'1px solid var(--border2)',color:'var(--text3)',fontFamily:"'Jost',sans-serif",fontSize:9,letterSpacing:'2px',textTransform:'uppercase',padding:11,borderRadius:3,cursor:'pointer',marginTop:12,opacity:leaving?0.5:1}}>
           {leaving ? 'Leaving...' : 'Leave Queue'}
         </button>
       </div>
-
       <div style={s.powered}>Powered by <span style={{color:'var(--gold-dim)'}}>Waitless</span></div>
     </div>
   );

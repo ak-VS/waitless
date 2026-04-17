@@ -1,14 +1,15 @@
 'use client';
 export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ui/ThemeToggle';
-
-
 export default function FloorMap() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const restaurant_id = searchParams.get('r');
+  const [restaurant_id, setRestaurantId] = useState<string|null>(null);
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  setRestaurantId(params.get('r'));
+}, []);
   const [tables, setTables] = useState<any[]>([]);
   const [restaurant, setRestaurant] = useState<any>(null);
   const [selectedTable, setSelectedTable] = useState<any>(null);
@@ -465,3 +466,4 @@ const s: any = {
     whiteSpace:'nowrap'
   },
 };
+

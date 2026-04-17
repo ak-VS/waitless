@@ -1,26 +1,38 @@
 'use client';
 export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ui/ThemeToggle';
-export const dynamic = 'force-dynamic';
 
 export default function JoinQueue() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const restaurant_id = searchParams.get('r');
-  const table_id = searchParams.get('table');
-  const table_label = searchParams.get('label');
-  const table_seats = searchParams.get('seats');
-  const table_zone = searchParams.get('zone');
-  const is_any = searchParams.get('any') === 'true';
+  const [restaurant_id, setRestaurantId] = useState<string|null>(null);
+  const [table_id, setTableId] = useState<string|null>(null);
+  const [table_label, setTableLabel] = useState<string|null>(null);
+  const [table_seats, setTableSeats] = useState<string|null>(null);
+  const [table_zone, setTableZone] = useState<string|null>(null);
+  const [is_any, setIsAny] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRestaurantId(params.get('r'));
+    setTableId(params.get('table'));
+    setTableLabel(params.get('label'));
+    setTableSeats(params.get('seats'));
+    setTableZone(params.get('zone'));
+    setIsAny(params.get('any') === 'true');
+  }, []);
 
   const [restaurant, setRestaurant] = useState<any>(null);
   const [name, setName] = useState('');
-  const [partySize, setPartySize] = useState(table_seats ? parseInt(table_seats) : 2);
+  const [partySize, setPartySize] = useState(2);
   const [occasion, setOccasion] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (table_seats) setPartySize(parseInt(table_seats));
+  }, [table_seats]);
 
   useEffect(() => {
     if (!restaurant_id) return;
@@ -87,7 +99,6 @@ export default function JoinQueue() {
     <div style={s.page}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Jost:wght@300;400;500&display=swap');`}</style>
 
-      {/* Header */}
       <div style={s.header}>
         <div>
           <div style={s.restName}>{restaurant?.name || '...'}</div>
@@ -97,15 +108,11 @@ export default function JoinQueue() {
       </div>
 
       <div style={s.body}>
-
-        {/* Back button */}
-        <div
-          style={s.backBtn}
+        <div style={s.backBtn}
           onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}>
           ← Back to floor map
         </div>
 
-        {/* Table card */}
         {(table_label && !is_any) && (
           <div style={s.tableCard}>
             <div style={s.tcLeft}>
@@ -189,68 +196,27 @@ export default function JoinQueue() {
 }
 
 const s: any = {
-  page:{
-    background:'var(--bg)',minHeight:'100vh',display:'flex',
-    flexDirection:'column',maxWidth:480,margin:'0 auto',
-    fontFamily:"'Jost',sans-serif",fontWeight:300
-  },
-  header:{
-    padding:'14px 20px',borderBottom:'1px solid var(--border)',
-    display:'flex',alignItems:'center',justifyContent:'space-between'
-  },
+  page:{background:'var(--bg)',minHeight:'100vh',display:'flex',flexDirection:'column',maxWidth:480,margin:'0 auto',fontFamily:"'Jost',sans-serif",fontWeight:300},
+  header:{padding:'14px 20px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'},
   restName:{fontFamily:"'Cormorant Garamond',serif",fontSize:20,color:'var(--text)',fontWeight:300},
   restAddr:{fontSize:9,letterSpacing:'1px',color:'var(--text3)',marginTop:1},
   body:{padding:'20px 20px 32px',flex:1},
-  backBtn:{
-    display:'flex',alignItems:'center',gap:6,fontSize:9,
-    letterSpacing:'1.5px',textTransform:'uppercase',
-    color:'var(--text3)',cursor:'pointer',marginBottom:16
-  },
-  tableCard:{
-    background:'var(--bg2)',border:'1px solid var(--gold-dim)',
-    borderRadius:3,padding:'12px 14px',marginBottom:20,
-    display:'flex',alignItems:'center',justifyContent:'space-between'
-  },
+  backBtn:{display:'flex',alignItems:'center',gap:6,fontSize:9,letterSpacing:'1.5px',textTransform:'uppercase',color:'var(--text3)',cursor:'pointer',marginBottom:16},
+  tableCard:{background:'var(--bg2)',border:'1px solid var(--gold-dim)',borderRadius:3,padding:'12px 14px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between'},
   tcLeft:{flex:1},
   tcLabel:{fontSize:7,letterSpacing:'2px',textTransform:'uppercase',color:'var(--gold-dim)',marginBottom:3},
   tcName:{fontSize:15,color:'var(--text)',fontFamily:"'Cormorant Garamond',serif"},
   tcZone:{fontSize:9,color:'var(--text3)',marginTop:2,textTransform:'capitalize'},
-  tcChange:{
-    background:'transparent',border:'1px solid var(--border2)',
-    color:'var(--text3)',fontSize:8,letterSpacing:'1.5px',
-    textTransform:'uppercase',padding:'5px 10px',borderRadius:2,cursor:'pointer'
-  },
+  tcChange:{background:'transparent',border:'1px solid var(--border2)',color:'var(--text3)',fontSize:8,letterSpacing:'1.5px',textTransform:'uppercase',padding:'5px 10px',borderRadius:2,cursor:'pointer'},
   formTitle:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,color:'var(--text)',marginBottom:2},
   formSub:{fontSize:9,letterSpacing:'1.5px',textTransform:'uppercase',color:'var(--text3)',marginBottom:20},
   label:{fontSize:8,letterSpacing:'2px',textTransform:'uppercase',color:'var(--text3)',display:'block',marginBottom:6},
-  input:{
-    width:'100%',background:'var(--bg3)',border:'1px solid var(--border2)',
-    color:'var(--text)',fontFamily:"'Jost',sans-serif",fontSize:14,
-    padding:'11px 12px',borderRadius:3,outline:'none',
-    marginBottom:16,WebkitAppearance:'none'
-  },
+  input:{width:'100%',background:'var(--bg3)',border:'1px solid var(--border2)',color:'var(--text)',fontFamily:"'Jost',sans-serif",fontSize:14,padding:'11px 12px',borderRadius:3,outline:'none',marginBottom:16,WebkitAppearance:'none'},
   paxRow:{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'},
-  paxBtn:{
-    flex:1,minWidth:44,background:'var(--bg3)',
-    borderWidth:1,borderStyle:'solid',borderColor:'var(--border2)',
-    color:'var(--text2)',fontFamily:"'Jost',sans-serif",
-    fontSize:13,padding:'10px 4px',borderRadius:2,cursor:'pointer',textAlign:'center'
-  },
-  paxOn:{
-    background:'rgba(201,168,76,.1)',
-    borderWidth:1,borderStyle:'solid',
-    borderColor:'var(--gold)',color:'var(--gold)'
-  },
-  errorBox:{
-    background:'rgba(201,76,76,.1)',border:'1px solid #c94c4c',
-    borderRadius:3,padding:'10px 12px',fontSize:11,color:'#e88080',marginBottom:12
-  },
-  submitBtn:{
-    width:'100%',background:'var(--gold)',border:'none',color:'#0d0d0d',
-    fontFamily:"'Jost',sans-serif",fontSize:11,letterSpacing:'2.5px',
-    textTransform:'uppercase',padding:14,borderRadius:3,
-    cursor:'pointer',fontWeight:500,marginBottom:12
-  },
+  paxBtn:{flex:1,minWidth:44,background:'var(--bg3)',borderWidth:1,borderStyle:'solid',borderColor:'var(--border2)',color:'var(--text2)',fontFamily:"'Jost',sans-serif",fontSize:13,padding:'10px 4px',borderRadius:2,cursor:'pointer',textAlign:'center'},
+  paxOn:{background:'rgba(201,168,76,.1)',borderWidth:1,borderStyle:'solid',borderColor:'var(--gold)',color:'var(--gold)'},
+  errorBox:{background:'rgba(201,76,76,.1)',border:'1px solid #c94c4c',borderRadius:3,padding:'10px 12px',fontSize:11,color:'#e88080',marginBottom:12},
+  submitBtn:{width:'100%',background:'var(--gold)',border:'none',color:'#0d0d0d',fontFamily:"'Jost',sans-serif",fontSize:11,letterSpacing:'2.5px',textTransform:'uppercase',padding:14,borderRadius:3,cursor:'pointer',fontWeight:500,marginBottom:12},
   note:{fontSize:10,color:'var(--text3)',textAlign:'center',lineHeight:1.6,letterSpacing:'.3px'},
   powered:{textAlign:'center',padding:'12px',fontSize:8,letterSpacing:'2px',textTransform:'uppercase',color:'var(--text3)'},
 };
