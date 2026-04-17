@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
   async redirects() {
     return [
       {
