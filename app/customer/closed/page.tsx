@@ -1,6 +1,6 @@
 'use client';
 export const dynamic = 'force-dynamic';
-export const dynamic = 'force-dynamic';
+
 import { useEffect, useState } from 'react';
 
 export default function RestaurantClosed() {
