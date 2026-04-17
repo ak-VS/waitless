@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { io } from 'socket.io-client';
+export const dynamic = 'force-dynamic';
 
 export default function QueueToken() {
   const router = useRouter();

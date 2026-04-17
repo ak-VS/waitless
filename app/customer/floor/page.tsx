@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+export const dynamic = 'force-dynamic';
 
 export default function FloorMap() {
   const router = useRouter();

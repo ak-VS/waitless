@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  output: 'standalone',
   async redirects() {
     return [
       {
