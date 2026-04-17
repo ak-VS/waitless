@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/theme";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
-  title: "Waitless — Smart Restaurant Queue",
+  title: "Waitless – Smart Restaurant Queue",
   description: "Skip the line. Join the queue.",
 };
 
