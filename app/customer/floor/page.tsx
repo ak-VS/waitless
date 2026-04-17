@@ -106,6 +106,7 @@ function FloorMapInner() {
         @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
       `}</style>
 
+      {/* Header */}
       <div style={s.header}>
         <div style={s.hTop}>
           <div>
@@ -151,6 +152,7 @@ function FloorMapInner() {
         </div>
       </div>
 
+      {/* Any table button */}
       <div style={s.anyWrap}>
         <button style={s.anyBtn} onClick={() => goToJoin(null)}>
           <div style={s.anyBtnLeft}>
@@ -161,79 +163,67 @@ function FloorMapInner() {
         </button>
       </div>
 
-      {/* Floor Map — scrollable on mobile */}
+      {/* Floor Map */}
       <div style={s.mapArea}>
-        <div style={{
-          overflowX: 'auto',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          cursor: 'grab',
-          width: '100%',
-        }}>
-          <svg
-            viewBox="0 0 560 490"
-            style={{
-              display: 'block',
-              minWidth: '560px',
-              width: '560px',
-              height: 'auto',
-            }}
-            preserveAspectRatio="xMidYMid meet"
-          >
-            <rect width="560" height="490" fill="var(--map-bg)"/>
-            <rect x="0" y="0" width="560" height="90" fill="var(--map-zone-window)" stroke="var(--border)" strokeWidth=".5"/>
-            <rect x="0" y="90" width="60" height="260" fill="var(--map-zone-outdoor)" stroke="var(--border)" strokeWidth=".5"/>
-            <rect x="500" y="90" width="60" height="260" fill="var(--map-zone-outdoor)" stroke="var(--border)" strokeWidth=".5"/>
-            <rect x="60" y="90" width="440" height="170" fill="var(--map-zone-indoor)" stroke="var(--border)" strokeWidth=".5"/>
-            <rect x="60" y="260" width="440" height="90" fill="var(--map-zone-private)" stroke="var(--border)" strokeWidth=".5"/>
-            <rect x="0" y="350" width="560" height="130" fill="var(--map-zone-bottom)" stroke="var(--border)" strokeWidth=".5"/>
-            <text x="280" y="13" textAnchor="middle" fontSize="8" letterSpacing="3" fill="var(--map-label)" fontFamily="Jost,sans-serif">WINDOW SEATING</text>
-            <text x="30" y="110" textAnchor="middle" fontSize="6" fill="var(--map-outdoor-label)" fontFamily="Jost,sans-serif">OUT</text>
-            <text x="530" y="110" textAnchor="middle" fontSize="6" fill="var(--map-outdoor-label)" fontFamily="Jost,sans-serif">OUT</text>
-            <text x="280" y="105" textAnchor="middle" fontSize="8" letterSpacing="2.5" fill="var(--map-zone-label)" fontFamily="Jost,sans-serif">INDOOR DINING</text>
-            <text x="280" y="275" textAnchor="middle" fontSize="8" letterSpacing="2.5" fill="var(--map-zone-label)" fontFamily="Jost,sans-serif">PRIVATE DINING</text>
-            <text x="280" y="365" textAnchor="middle" fontSize="8" letterSpacing="2.5" fill="var(--map-outdoor-label)" fontFamily="Jost,sans-serif">OUTDOOR TERRACE</text>
-            <rect x="180" y="90" width="200" height="26" fill="var(--map-kitchen)" stroke="var(--border)" strokeWidth=".5" rx="1"/>
-            <text x="280" y="106" textAnchor="middle" fontSize="6" letterSpacing="2" fill="var(--map-label)" fontFamily="Jost,sans-serif">KITCHEN · STAFF ONLY</text>
-            {[[150,170],[410,170],[150,240],[410,240]].map(([cx,cy],i) => (
-              <circle key={i} cx={cx} cy={cy} r="5" fill="var(--pillar)" stroke="var(--pillar-border)" strokeWidth="1"/>
-            ))}
-            <rect x="210" y="468" width="140" height="14" fill="var(--map-entrance)" stroke="var(--border2)" strokeWidth=".5" rx="2"/>
-            <text x="280" y="479" textAnchor="middle" fontSize="6" letterSpacing="2" fill="var(--map-label)" fontFamily="Jost,sans-serif">ENTRANCE</text>
-            {tables.filter(t => zone === 'all' || t.zone === zone).map(t => {
-              const scale = 2;
-              const x = t.x_pos * scale;
-              const y = t.y_pos * scale;
-              const w = t.width * scale;
-              const h = t.height * scale;
-              const cx = x + w/2;
-              const cy = y + h/2;
-              const isSel = selectedTable?.id === t.id;
-              return (
-                <g key={t.id} style={{cursor:'pointer'}}
-                  onClick={() => setSelectedTable(selectedTable?.id === t.id ? null : t)}>
-                  <rect x={x} y={y} width={w} height={h}
-                    rx={t.seats >= 8 ? 4 : 3}
-                    fill={isSel ? 'rgba(201,168,76,.2)' : 'var(--map-table)'}
-                    stroke={isSel ? '#C9A84C' : t.is_popular ? '#8a6e2f' : 'var(--map-table-border)'}
-                    strokeWidth={isSel ? 2 : 1}
-                  />
-                  <text x={cx} y={cy-3} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={t.seats>=8?11:10} fontFamily="Jost,sans-serif"
-                    fill={isSel?'#C9A84C':'var(--text2)'}>
-                    {t.table_label}
-                  </text>
-                  <text x={cx} y={cy+9} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={8} fontFamily="Jost,sans-serif" fill="var(--text3)">
-                    {t.seats}p
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
+        <svg
+          viewBox="0 0 560 490"
+          style={{display:'block', width:'100%', height:'auto'}}
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <rect width="560" height="490" fill="var(--map-bg)"/>
+          <rect x="0" y="0" width="560" height="90" fill="var(--map-zone-window)" stroke="var(--border)" strokeWidth=".5"/>
+          <rect x="0" y="90" width="60" height="260" fill="var(--map-zone-outdoor)" stroke="var(--border)" strokeWidth=".5"/>
+          <rect x="500" y="90" width="60" height="260" fill="var(--map-zone-outdoor)" stroke="var(--border)" strokeWidth=".5"/>
+          <rect x="60" y="90" width="440" height="170" fill="var(--map-zone-indoor)" stroke="var(--border)" strokeWidth=".5"/>
+          <rect x="60" y="260" width="440" height="90" fill="var(--map-zone-private)" stroke="var(--border)" strokeWidth=".5"/>
+          <rect x="0" y="350" width="560" height="130" fill="var(--map-zone-bottom)" stroke="var(--border)" strokeWidth=".5"/>
+          <text x="280" y="13" textAnchor="middle" fontSize="8" letterSpacing="3" fill="var(--map-label)" fontFamily="Jost,sans-serif">WINDOW SEATING</text>
+          <text x="30" y="110" textAnchor="middle" fontSize="6" fill="var(--map-outdoor-label)" fontFamily="Jost,sans-serif">OUT</text>
+          <text x="530" y="110" textAnchor="middle" fontSize="6" fill="var(--map-outdoor-label)" fontFamily="Jost,sans-serif">OUT</text>
+          <text x="280" y="105" textAnchor="middle" fontSize="8" letterSpacing="2.5" fill="var(--map-zone-label)" fontFamily="Jost,sans-serif">INDOOR DINING</text>
+          <text x="280" y="275" textAnchor="middle" fontSize="8" letterSpacing="2.5" fill="var(--map-zone-label)" fontFamily="Jost,sans-serif">PRIVATE DINING</text>
+          <text x="280" y="365" textAnchor="middle" fontSize="8" letterSpacing="2.5" fill="var(--map-outdoor-label)" fontFamily="Jost,sans-serif">OUTDOOR TERRACE</text>
+          <rect x="180" y="90" width="200" height="26" fill="var(--map-kitchen)" stroke="var(--border)" strokeWidth=".5" rx="1"/>
+          <text x="280" y="106" textAnchor="middle" fontSize="6" letterSpacing="2" fill="var(--map-label)" fontFamily="Jost,sans-serif">KITCHEN · STAFF ONLY</text>
+          {[[150,170],[410,170],[150,240],[410,240]].map(([cx,cy],i) => (
+            <circle key={i} cx={cx} cy={cy} r="5" fill="var(--pillar)" stroke="var(--pillar-border)" strokeWidth="1"/>
+          ))}
+          <rect x="210" y="468" width="140" height="14" fill="var(--map-entrance)" stroke="var(--border2)" strokeWidth=".5" rx="2"/>
+          <text x="280" y="479" textAnchor="middle" fontSize="6" letterSpacing="2" fill="var(--map-label)" fontFamily="Jost,sans-serif">ENTRANCE</text>
+          {tables.filter(t => zone === 'all' || t.zone === zone).map(t => {
+            const scale = 2;
+            const x = t.x_pos * scale;
+            const y = t.y_pos * scale;
+            const w = t.width * scale;
+            const h = t.height * scale;
+            const cx = x + w/2;
+            const cy = y + h/2;
+            const isSel = selectedTable?.id === t.id;
+            return (
+              <g key={t.id} style={{cursor:'pointer'}}
+                onClick={() => setSelectedTable(selectedTable?.id === t.id ? null : t)}>
+                <rect x={x} y={y} width={w} height={h}
+                  rx={t.seats >= 8 ? 4 : 3}
+                  fill={isSel ? 'rgba(201,168,76,.2)' : 'var(--map-table)'}
+                  stroke={isSel ? '#C9A84C' : t.is_popular ? '#8a6e2f' : 'var(--map-table-border)'}
+                  strokeWidth={isSel ? 2 : 1}
+                />
+                <text x={cx} y={cy-3} textAnchor="middle" dominantBaseline="middle"
+                  fontSize={t.seats>=8?11:10} fontFamily="Jost,sans-serif"
+                  fill={isSel?'#C9A84C':'var(--text2)'}>
+                  {t.table_label}
+                </text>
+                <text x={cx} y={cy+9} textAnchor="middle" dominantBaseline="middle"
+                  fontSize={8} fontFamily="Jost,sans-serif" fill="var(--text3)">
+                  {t.seats}p
+                </text>
+              </g>
+            );
+          })}
+        </svg>
       </div>
 
+      {/* Legend */}
       <div style={s.legend}>
         {[
           {bg:'var(--map-table)', border:'1px solid var(--map-table-border)', label:'Available'},
@@ -247,6 +237,7 @@ function FloorMapInner() {
         ))}
       </div>
 
+      {/* Tray */}
       <div style={s.tray}>
         {!selectedTable
           ? <div style={s.trayEmpty}>Tap a table — or use "Any Table" above</div>
@@ -303,7 +294,7 @@ const s: any = {
   anyBtnTitle:{fontSize:12,color:'var(--gold)',fontFamily:"'Jost',sans-serif",fontWeight:500,letterSpacing:'.5px',marginBottom:2},
   anyBtnSub:{fontSize:9,color:'var(--text3)',letterSpacing:'.5px'},
   anyArrow:{fontSize:18,color:'var(--gold)'},
-  mapArea:{width:'100%',background:'var(--map-bg)',flexShrink:0,overflow:'auto',maxHeight:'60vh',WebkitOverflowScrolling:'touch'},
+  mapArea:{width:'100%',background:'var(--map-bg)',flexShrink:0},
   legend:{display:'flex',gap:12,padding:'8px 16px',borderTop:'1px solid var(--border)',flexWrap:'wrap',background:'var(--bg)',flexShrink:0},
   leg:{display:'flex',alignItems:'center',gap:5,fontSize:7,letterSpacing:'1px',textTransform:'uppercase',color:'var(--text3)'},
   ld:{width:10,height:10,borderRadius:1,flexShrink:0},
