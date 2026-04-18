@@ -50,17 +50,17 @@ export async function GET(req: NextRequest) {
     );
 
     // Peak hours — last 7 days
-    const peakHours = await query(
-      `SELECT
-        hour_of_day as hour,
-        COUNT(*) as count
-       FROM queue_entries
-       WHERE restaurant_id = $1
-       AND joined_at > NOW() - INTERVAL '7 days'
-       GROUP BY hour_of_day
-       ORDER BY hour_of_day`,
-      [restaurant_id]
-    );
+const peakHours = await query(
+  `SELECT
+    EXTRACT(HOUR FROM joined_at) as hour,
+    COUNT(*) as count
+   FROM queue_entries
+   WHERE restaurant_id = $1
+   AND joined_at > NOW() - INTERVAL '7 days'
+   GROUP BY hour
+   ORDER BY hour`,
+  [restaurant_id]
+);
 
     // Peak days
     const peakDays = await query(
@@ -107,18 +107,18 @@ export async function GET(req: NextRequest) {
     );
 
     // Last 7 days daily trend
-    const dailyTrend = await query(
-      `SELECT
-        DATE(joined_at AT TIME ZONE 'Asia/Kolkata') as date,
-        COUNT(*) FILTER (WHERE status = 'seated') as seated,
-        COUNT(*) as total
-       FROM queue_entries
-       WHERE restaurant_id = $1
-       AND joined_at > NOW() - INTERVAL '7 days'
-       GROUP BY date
-       ORDER BY date`,
-      [restaurant_id]
-    );
+const dailyTrend = await query(
+  `SELECT
+    DATE(joined_at) as date,
+    COUNT(*) FILTER (WHERE status = 'seated') as seated,
+    COUNT(*) as total
+   FROM queue_entries
+   WHERE restaurant_id = $1
+   AND joined_at > NOW() - INTERVAL '7 days'
+   GROUP BY date
+   ORDER BY date`,
+  [restaurant_id]
+);
 
     return NextResponse.json({
       success: true,
