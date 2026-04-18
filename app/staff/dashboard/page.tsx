@@ -237,6 +237,13 @@ const handleCloseNight = async () => {
   }}>
   Close Night
 </button>
+
+<button
+  onClick={() => router.push('/restaurant/analytics')}
+  style={{background:'transparent',border:'1px solid var(--border2)',color:'var(--text3)',fontFamily:"'Jost',sans-serif",fontSize:8,letterSpacing:'1.5px',textTransform:'uppercase',padding:'5px 10px',borderRadius:2,cursor:'pointer'}}>
+  Analytics
+</button>
+
           <button
   onClick={() => router.push('/restaurant/profile')}
   style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 10px', borderRadius: 2, cursor: 'pointer' }}>
