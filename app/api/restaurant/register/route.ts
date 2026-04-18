@@ -5,14 +5,13 @@ import { hashPassword, generateToken } from '@/lib/auth';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, address, city, phone, email, password } = body;
+    const {
+      name, address, city, phone, email, password,
+      subscription, timezone, opening_time, closing_time, lat, lng
+    } = body;
 
-    // Validate
-    if (!name || !address || !city || !phone || !email || !password) {
-      return NextResponse.json(
-        { error: 'All fields are required' },
-        { status: 400 }
-      );
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 });
     }
 
     // Check if email already exists
@@ -27,20 +26,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hash password
     const password_hash = await hashPassword(password);
 
-    // Insert restaurant
     const result = await query(
-      `INSERT INTO restaurants (name, address, city, phone, email, password_hash)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, name, email, city`,
-      [name, address, city, phone, email, password_hash]
+      `INSERT INTO restaurants 
+       (name, address, city, phone, email, password_hash, subscription, timezone, opening_time, closing_time, lat, lng)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING id, name, email, city, subscription, timezone, opening_time, closing_time`,
+      [
+        name,
+        address || '',
+        city || '',
+        phone || '',
+        email,
+        password_hash,
+        subscription || 'base',
+        timezone || 'Asia/Kolkata',
+        opening_time || '11:00',
+        closing_time || '23:00',
+        lat || null,
+        lng || null
+      ]
     );
 
     const restaurant = result.rows[0];
 
-    // Generate JWT
     const token = generateToken({
       id: restaurant.id,
       email: restaurant.email,
@@ -55,9 +65,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('Registration error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

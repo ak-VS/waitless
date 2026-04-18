@@ -52,7 +52,14 @@ export async function GET(req: NextRequest) {
     const tables_total = parseInt(tableStats.rows[0].total) || 28;
     const tables_occupied = parseInt(tableStats.rows[0].occupied) || 0;
 
-    // Live ML prediction based on current position
+    // Get restaurant timezone
+    const restResult = await query(
+      'SELECT timezone FROM restaurants WHERE id = $1',
+      [restaurant_id]
+    );
+    const timezone = restResult.rows[0]?.timezone || 'Asia/Kolkata';
+
+    // Live ML prediction
     const prediction = await predictWaitTime({
       party_size: entry.party_size,
       tables_occupied,
@@ -60,19 +67,21 @@ export async function GET(req: NextRequest) {
       queue_length: position - 1,
       avg_party_size_ahead: 2.5
     });
-// Send 15 min warning notification if wait is between 14-16 mins
-if (prediction.minutes >= 14 && prediction.minutes <= 16) {
-  fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      queue_entry_id: entry.id,
-      title: 'Almost your turn!',
-      message: `About 15 minutes remaining. Start making your way to ${entry.restaurant_name || 'the restaurant'}.`,
-      type: 'fifteen_min_warning'
-    })
-  }).catch(() => {});
-}
+
+    // 15 min warning push notification
+    if (prediction.minutes >= 14 && prediction.minutes <= 16) {
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          queue_entry_id: entry.id,
+          title: 'Almost your turn!',
+          message: 'About 15 minutes remaining. Start making your way to the restaurant.',
+          type: 'fifteen_min_warning'
+        })
+      }).catch(() => {});
+    }
+
     return NextResponse.json({
       success: true,
       position,
@@ -87,14 +96,12 @@ if (prediction.minutes >= 14 && prediction.minutes <= 16) {
       zone_preference: entry.zone_preference,
       assigned_table_id: entry.assigned_table_id,
       notified_at: entry.notified_at,
-      joined_at: entry.joined_at
+      joined_at: entry.joined_at,
+      timezone
     });
 
-    
   } catch (error) {
     console.error('Queue status error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  
 }

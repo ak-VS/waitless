@@ -266,8 +266,9 @@ function QueueTokenInner() {
             <div style={s.tokenLabel}>Joined at</div>
             <div style={s.tokenTime}>
               {new Date(data.joined_at).toLocaleTimeString('en-IN', {
-                hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata'
-              })}
+  hour: '2-digit', minute: '2-digit', hour12: true,
+  timeZone: data.timezone || 'Asia/Kolkata'
+})}
             </div>
           </div>
           {data.zone_preference && data.zone_preference !== 'any' && (
