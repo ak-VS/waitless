@@ -57,19 +57,12 @@ export default function StaffDashboard() {
     const socketUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
     const socket = io(socketUrl, { transports: ['websocket'] });
     socketRef.current = socket;
-    socket.on('connect', () => {
-      socket.emit('join_restaurant', restaurant.id);
-    });
+    socket.on('connect', () => { socket.emit('join_restaurant', restaurant.id); });
     socket.on('queue_updated', (data: any) => {
       fetchData();
-      if (data.type === 'new_customer') {
-        showToastMsg(`New customer joined · ${data.entry.customer_name} (${data.entry.token})`);
-      }
+      if (data.type === 'new_customer') showToastMsg(`New customer joined · ${data.entry.customer_name} (${data.entry.token})`);
     });
-    socket.on('restaurant_closed', () => {
-      fetchData();
-      showToastMsg('Restaurant closed for the night');
-    });
+    socket.on('restaurant_closed', () => { fetchData(); showToastMsg('Restaurant closed for the night'); });
     socket.on('table_updated', () => { fetchData(); });
     return () => { socket.disconnect(); socketRef.current = null; };
   }, [restaurant, fetchData]);
@@ -92,11 +85,8 @@ export default function StaffDashboard() {
     });
     const data = await res.json();
     if (action === 'exit') {
-      if (data.notified_customer) {
-        showToastMsg(`Table free · ${data.notified_customer.name} (${data.notified_customer.token}) notified ✓`);
-      } else {
-        showToastMsg('Table cleared · No one in queue');
-      }
+      if (data.notified_customer) showToastMsg(`Table free · ${data.notified_customer.name} (${data.notified_customer.token}) notified ✓`);
+      else showToastMsg('Table cleared · No one in queue');
     } else if (action === 'delay') showToastMsg('Table marked for cleaning');
     else if (action === 'ready') showToastMsg('Table ready · Auto-assigning next customer');
     else if (action === 'occupy') showToastMsg('Walk-in seated · Session started');
@@ -126,31 +116,20 @@ export default function StaffDashboard() {
   };
 
   const handleNoShow = async (table: any) => {
-    // Skip the queue entry if exists
     if (table.current_queue_entry_id) {
       await fetch('/api/staff/queue', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          queue_entry_id: table.current_queue_entry_id,
-          action: 'skip',
-          restaurant_id: restaurant.id
-        })
+        body: JSON.stringify({ queue_entry_id: table.current_queue_entry_id, action: 'skip', restaurant_id: restaurant.id })
       });
     }
-    // Always free the table
     await fetch('/api/staff/tables', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        table_id: table.id,
-        action: 'exit',
-        restaurant_id: restaurant.id
-      })
+      body: JSON.stringify({ table_id: table.id, action: 'exit', restaurant_id: restaurant.id })
     });
     showToastMsg(`No show · Table ${table.table_label} freed`);
-    setDrawer(false);
-    setSelectedTable(null);
+    setDrawer(false); setSelectedTable(null);
     fetchData();
   };
 
@@ -161,32 +140,17 @@ export default function StaffDashboard() {
       (entry.zone_preference === 'any' || t.zone === entry.zone_preference)
     ) || tables.find(t => t.status === 'free' && t.seats >= entry.party_size);
 
-    if (!bestTable) {
-      showToastMsg('No suitable free table available');
-      return;
-    }
+    if (!bestTable) { showToastMsg('No suitable free table available'); return; }
 
-    // Notify customer
-    await fetch('/api/staff/queue', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        queue_entry_id: entry.id,
-        action: 'notify',
-        table_id: bestTable.id,
-        restaurant_id: restaurant.id
-      })
-    });
-
-    // Reserve table
     await fetch('/api/staff/tables', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         table_id: bestTable.id,
-        action: 'reserve_for',
+        action: 'seat_customer',
         queue_entry_id: entry.id,
-        restaurant_id: restaurant.id
+        restaurant_id: restaurant.id,
+        party_size: entry.party_size
       })
     });
 
@@ -202,11 +166,8 @@ export default function StaffDashboard() {
       body: JSON.stringify({ restaurant_id: restaurant.id })
     });
     const data = await res.json();
-    if (data.success) {
-      showToastMsg(`Night closed · ${data.customers_notified} customers notified · All tables cleared`);
-    }
-    setShowCloseConfirm(false);
-    setClosingNight(false);
+    if (data.success) showToastMsg(`Night closed · ${data.customers_notified} customers notified · All tables cleared`);
+    setShowCloseConfirm(false); setClosingNight(false);
     fetchData();
   };
 
@@ -251,23 +212,14 @@ export default function StaffDashboard() {
         ::-webkit-scrollbar-thumb{background:var(--border2)}
       `}</style>
 
-      {/* Toast */}
-      <div style={{
-        position: 'fixed', top: 16, left: '50%',
-        transform: `translateX(-50%) translateY(${showToast ? '0' : '-100px'})`,
-        background: 'var(--bg3)', border: '1px solid #2d6145', borderRadius: 8,
-        padding: '10px 20px', fontSize: 11, color: 'var(--text)', zIndex: 999,
-        transition: 'transform .3s cubic-bezier(.34,1.4,.64,1)', whiteSpace: 'nowrap',
-      }}>{toast}</div>
+      <div style={{ position: 'fixed', top: 16, left: '50%', transform: `translateX(-50%) translateY(${showToast ? '0' : '-100px'})`, background: 'var(--bg3)', border: '1px solid #2d6145', borderRadius: 8, padding: '10px 20px', fontSize: 11, color: 'var(--text)', zIndex: 999, transition: 'transform .3s cubic-bezier(.34,1.4,.64,1)', whiteSpace: 'nowrap' }}>{toast}</div>
 
       {/* Top bar */}
       <div style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div>
           <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, color: 'var(--text)', fontWeight: 300 }}>{restaurant.name}</span>
           <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 8, letterSpacing: '1px' }}>Staff Dashboard</span>
-          <div style={{ fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)', marginTop: 2 }}>
-            {restaurant.city} · {isPremium ? 'Premium' : 'Base'} plan
-          </div>
+          <div style={{ fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)', marginTop: 2 }}>{restaurant.city} · {isPremium ? 'Premium' : 'Base'} plan</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(74,158,110,.1)', border: '1px solid #2d6145', borderRadius: 2, padding: '4px 10px' }}>
@@ -276,18 +228,10 @@ export default function StaffDashboard() {
           </div>
           <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 14, color: 'var(--text3)', letterSpacing: 1 }}>{clock}</span>
           <ThemeToggle />
-          <button onClick={handleLogout} style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 10px', borderRadius: 2, cursor: 'pointer' }}>
-            Logout
-          </button>
-          <button onClick={() => setShowCloseConfirm(true)} style={{ background: 'transparent', border: '1px solid #c94c4c', color: '#c94c4c', fontFamily: "'Jost',sans-serif", fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 10px', borderRadius: 2, cursor: 'pointer' }}>
-            Close Night
-          </button>
-          <button onClick={() => router.push('/restaurant/analytics')} style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 10px', borderRadius: 2, cursor: 'pointer' }}>
-            Analytics
-          </button>
-          <button onClick={() => router.push('/restaurant/profile')} style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 10px', borderRadius: 2, cursor: 'pointer' }}>
-            Profile
-          </button>
+          <button onClick={handleLogout} style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 10px', borderRadius: 2, cursor: 'pointer' }}>Logout</button>
+          <button onClick={() => setShowCloseConfirm(true)} style={{ background: 'transparent', border: '1px solid #c94c4c', color: '#c94c4c', fontFamily: "'Jost',sans-serif", fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 10px', borderRadius: 2, cursor: 'pointer' }}>Close Night</button>
+          <button onClick={() => router.push('/restaurant/analytics')} style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 10px', borderRadius: 2, cursor: 'pointer' }}>Analytics</button>
+          <button onClick={() => router.push('/restaurant/profile')} style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 8, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '5px 10px', borderRadius: 2, cursor: 'pointer' }}>Profile</button>
         </div>
       </div>
 
@@ -296,18 +240,10 @@ export default function StaffDashboard() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.8)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'var(--bg2)', border: '1px solid #c94c4c', borderRadius: 8, padding: 24, width: '100%', maxWidth: 360 }}>
             <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, color: 'var(--text)', marginBottom: 8 }}>Close for the night?</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.7, marginBottom: 20 }}>
-              This will skip all customers in queue, notify them, clear all tables and end all active sessions. This cannot be undone.
-            </div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.7, marginBottom: 20 }}>This will skip all customers in queue, notify them, clear all tables and end all active sessions. This cannot be undone.</div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={handleCloseNight} disabled={closingNight}
-                style={{ flex: 1, background: '#c94c4c', border: 'none', color: '#fff', fontFamily: "'Jost',sans-serif", fontSize: 10, letterSpacing: '2px', textTransform: 'uppercase', padding: 12, borderRadius: 3, cursor: 'pointer', fontWeight: 500, opacity: closingNight ? .7 : 1 }}>
-                {closingNight ? 'Closing...' : 'Yes, Close Night'}
-              </button>
-              <button onClick={() => setShowCloseConfirm(false)}
-                style={{ flex: 1, background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 10, letterSpacing: '2px', textTransform: 'uppercase', padding: 12, borderRadius: 3, cursor: 'pointer' }}>
-                Cancel
-              </button>
+              <button onClick={handleCloseNight} disabled={closingNight} style={{ flex: 1, background: '#c94c4c', border: 'none', color: '#fff', fontFamily: "'Jost',sans-serif", fontSize: 10, letterSpacing: '2px', textTransform: 'uppercase', padding: 12, borderRadius: 3, cursor: 'pointer', fontWeight: 500, opacity: closingNight ? .7 : 1 }}>{closingNight ? 'Closing...' : 'Yes, Close Night'}</button>
+              <button onClick={() => setShowCloseConfirm(false)} style={{ flex: 1, background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text3)', fontFamily: "'Jost',sans-serif", fontSize: 10, letterSpacing: '2px', textTransform: 'uppercase', padding: 12, borderRadius: 3, cursor: 'pointer' }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -358,12 +294,9 @@ export default function StaffDashboard() {
                 return (
                   <div key={zone.id} style={{ marginBottom: 24 }}>
                     <div style={{ fontSize: 8, letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>{zone.label}</span>
-                      <span style={{ color: 'var(--border2)' }}>·</span>
+                      <span>{zone.label}</span><span style={{ color: 'var(--border2)' }}>·</span>
                       <span style={{ color: '#4a9e6e' }}>{zoneTables.filter(t => t.status === 'free').length} free</span>
-                      {zoneTables.filter(t => t.status === 'occupied').length > 0 && (
-                        <><span style={{ color: 'var(--border2)' }}>·</span><span style={{ color: '#e88080' }}>{zoneTables.filter(t => t.status === 'occupied').length} occupied</span></>
-                      )}
+                      {zoneTables.filter(t => t.status === 'occupied').length > 0 && (<><span style={{ color: 'var(--border2)' }}>·</span><span style={{ color: '#e88080' }}>{zoneTables.filter(t => t.status === 'occupied').length} occupied</span></>)}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {zoneTables.map(t => {
@@ -378,9 +311,7 @@ export default function StaffDashboard() {
                             {t.status === 'reserved' && <div style={{ fontSize: 8, color: '#C9A84C', marginBottom: 1 }}>rsv</div>}
                             <div style={{ fontSize: t.seats >= 8 ? 12 : 11, color: col.text, fontWeight: 400 }}>{t.table_label}</div>
                             <div style={{ fontSize: 8, color: 'var(--text3)', marginTop: 2 }}>{t.seats}p</div>
-                            {t.is_popular && t.status === 'free' && (
-                              <div style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', border: '2px solid var(--bg)' }}></div>
-                            )}
+                            {t.is_popular && t.status === 'free' && <div style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', border: '2px solid var(--bg)' }}></div>}
                           </div>
                         );
                       })}
@@ -398,8 +329,7 @@ export default function StaffDashboard() {
                 return (
                   <div key={zone} style={{ marginBottom: 20 }}>
                     <div style={{ fontSize: 8, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>{zone.charAt(0).toUpperCase() + zone.slice(1)}</span>
-                      <span style={{ color: 'var(--border2)' }}>·</span>
+                      <span>{zone.charAt(0).toUpperCase() + zone.slice(1)}</span><span style={{ color: 'var(--border2)' }}>·</span>
                       <span style={{ color: '#4a9e6e' }}>{zoneTables.filter(t => t.status === 'free').length} free</span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -415,9 +345,7 @@ export default function StaffDashboard() {
                             {t.status === 'reserved' && <div style={{ fontSize: 8, color: '#C9A84C', marginBottom: 1 }}>rsv</div>}
                             <div style={{ fontSize: 11, color: col.text }}>{t.table_label}</div>
                             <div style={{ fontSize: 8, color: 'var(--text3)', marginTop: 2 }}>{t.seats}p</div>
-                            {t.is_popular && t.status === 'free' && (
-                              <div style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', border: '2px solid var(--bg)' }}></div>
-                            )}
+                            {t.is_popular && t.status === 'free' && <div style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', border: '2px solid var(--bg)' }}></div>}
                           </div>
                         );
                       })}
@@ -441,7 +369,6 @@ export default function StaffDashboard() {
               </div>
             )}
           </div>
-
           <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
             {queue.length === 0 ? (
               <div style={{ padding: '32px 12px', textAlign: 'center', fontSize: 9, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)' }}>No one in queue</div>
@@ -449,18 +376,11 @@ export default function StaffDashboard() {
               <div key={entry.id} style={{
                 background: entry.priority === 'vip' ? 'rgba(201,168,76,.08)' : i === 0 ? 'rgba(201,168,76,.04)' : 'var(--bg3)',
                 border: `1px solid ${entry.priority === 'vip' ? 'var(--gold)' : i === 0 ? 'var(--gold)' : 'var(--border)'}`,
-                borderRadius: 3, padding: '10px 12px', marginBottom: 6,
-                position: 'relative', overflow: 'hidden', animation: 'slideUp .2s ease',
+                borderRadius: 3, padding: '10px 12px', marginBottom: 6, position: 'relative', overflow: 'hidden', animation: 'slideUp .2s ease',
               }}>
-                {entry.priority === 'vip' && (
-                  <div style={{ position: 'absolute', top: 0, right: 0, background: 'var(--gold)', color: '#0d0d0d', fontSize: 6, letterSpacing: '1.5px', padding: '3px 7px', fontWeight: 500 }}>★ PRIORITY</div>
-                )}
-                {entry.priority !== 'vip' && i === 0 && (
-                  <div style={{ position: 'absolute', top: 0, right: 0, background: 'var(--border2)', color: 'var(--text2)', fontSize: 6, letterSpacing: '1.5px', padding: '3px 7px' }}>NEXT</div>
-                )}
-                {entry.notified_at && (
-                  <div style={{ position: 'absolute', top: 0, left: 0, background: '#4a9e6e', color: '#fff', fontSize: 6, letterSpacing: '1px', padding: '3px 7px', fontWeight: 500 }}>NOTIFIED</div>
-                )}
+                {entry.priority === 'vip' && <div style={{ position: 'absolute', top: 0, right: 0, background: 'var(--gold)', color: '#0d0d0d', fontSize: 6, letterSpacing: '1.5px', padding: '3px 7px', fontWeight: 500 }}>★ PRIORITY</div>}
+                {entry.priority !== 'vip' && i === 0 && <div style={{ position: 'absolute', top: 0, right: 0, background: 'var(--border2)', color: 'var(--text2)', fontSize: 6, letterSpacing: '1.5px', padding: '3px 7px' }}>NEXT</div>}
+                {entry.notified_at && <div style={{ position: 'absolute', top: 0, left: 0, background: '#4a9e6e', color: '#fff', fontSize: 6, letterSpacing: '1px', padding: '3px 7px', fontWeight: 500 }}>NOTIFIED</div>}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, marginTop: (entry.priority === 'vip' || entry.notified_at) ? 10 : 0 }}>
                   <div style={{ fontSize: 13, color: 'var(--text)' }}>{entry.customer_name}</div>
                   <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 16, color: entry.priority === 'vip' ? 'var(--gold)' : 'var(--text2)' }}>{entry.token}</div>
@@ -505,9 +425,7 @@ export default function StaffDashboard() {
             </div>
             <div style={{ fontSize: 9, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 14 }}>
               {selectedTable.zone} · {selectedTable.seats}-Seater ·{' '}
-              <span style={{ color: selectedTable.status === 'occupied' ? '#e88080' : selectedTable.status === 'reserved' ? '#C9A84C' : selectedTable.status === 'cleaning' ? '#d4863a' : '#4a9e6e', textTransform: 'capitalize' }}>
-                {selectedTable.status}
-              </span>
+              <span style={{ color: selectedTable.status === 'occupied' ? '#e88080' : selectedTable.status === 'reserved' ? '#C9A84C' : selectedTable.status === 'cleaning' ? '#d4863a' : '#4a9e6e', textTransform: 'capitalize' }}>{selectedTable.status}</span>
             </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               {[
@@ -559,9 +477,7 @@ export default function StaffDashboard() {
               {confirm.action === 'exit' ? `Customer exited Table ${confirm.table.table_label}?` : `Walk-in at Table ${confirm.table.table_label}?`}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.7, marginBottom: 20 }}>
-              {confirm.action === 'exit'
-                ? 'Table will be cleared and the next matching customer in queue will be automatically notified.'
-                : 'A new session will be started for this table.'}
+              {confirm.action === 'exit' ? 'Table will be cleared and the next matching customer in queue will be automatically notified.' : 'A new session will be started for this table.'}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button style={{ flex: 1, background: '#4a9e6e', border: 'none', color: '#fff', fontFamily: "'Jost',sans-serif", fontSize: 10, letterSpacing: '2px', textTransform: 'uppercase', padding: 12, borderRadius: 3, cursor: 'pointer', fontWeight: 500 }}
