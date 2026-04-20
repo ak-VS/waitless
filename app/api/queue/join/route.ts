@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       [restaurant_id, party_size, zone_preference || 'any']
     );
 
-    if (freeTable.rows.length > 0 && queue_length === 0) {
+    if (freeTable.rows.length > 0) {
       const table = freeTable.rows[0];
 
       // Notify customer immediately
