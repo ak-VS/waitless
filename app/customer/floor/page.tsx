@@ -45,6 +45,7 @@ function FloorMapInner() {
     Promise.all([
       fetch(`/api/tables?restaurant_id=${restaurant_id}`).then(r => r.json()),
       fetch(`/api/restaurant/info?id=${restaurant_id}`).then(r => r.json()),
+      fetch(`/api/restaurant/info?id=${restaurant_id}`).then(r => r.json()),
     ]).then(([tablesData, restData]) => {
       setTables(tablesData.tables || []);
       setRestaurant(restData.restaurant);
@@ -132,7 +133,7 @@ function FloorMapInner() {
             {v: tables.length, l: 'Tables', c:'var(--text)'},
             {v: tables.filter(t => !t.status || t.status === 'free').length, l: 'Available', c:'#4a9e6e'},
             {v: '~20m', l: 'Avg wait', c:'var(--text)'},
-            {v: 34, l: 'Seated today', c:'var(--text)'},
+            {v: restaurant?.seated_today || 0, l: 'Seated today', c:'var(--text)'},
           ].map((item, i) => (
             <div key={i} style={{...s.stat, borderRight: i < 3 ? '1px solid var(--border)' : 'none'}}>
               <div style={{...s.sv, color: item.c}}>{item.v}</div>

@@ -21,7 +21,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, restaurant: result.rows[0] });
+    const seatedToday = await query(
+      `SELECT COUNT(*) FROM queue_entries 
+       WHERE restaurant_id = $1 
+       AND status = 'seated'
+       AND DATE(joined_at) = CURRENT_DATE`,
+      [id]
+    );
+
+    return NextResponse.json({
+      success: true,
+      restaurant: {
+        ...result.rows[0],
+        seated_today: parseInt(seatedToday.rows[0].count)
+      }
+    });
 
   } catch (error) {
     console.error('Restaurant info error:', error);
