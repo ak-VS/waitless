@@ -66,14 +66,16 @@ function JoinQueueInner() {
         }
         setLocationChecking(false);
       },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) {
-          setLocationBlocked(true);
-          setError('Location access is required to join the queue. Please enable location and try again.');
-        }
-        setLocationChecking(false);
-      },
-      { timeout: 8000, enableHighAccuracy: true }
+     (err) => {
+  setLocationBlocked(true);
+  setError(
+    err.code === err.PERMISSION_DENIED
+      ? 'Location access is required. Please enable location and try again.'
+      : 'Could not verify your location. Please enable GPS and try again.'
+  );
+  setLocationChecking(false);
+},
+{ timeout: 8000, enableHighAccuracy: true }
     );
   }, [restaurant_id, table_id]);
 
