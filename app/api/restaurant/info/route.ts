@@ -29,11 +29,18 @@ export async function GET(req: NextRequest) {
       [id]
     );
 
+    const queueCountResult = await query(
+      `SELECT COUNT(*) FROM queue_entries 
+       WHERE restaurant_id = $1 AND status = 'waiting'`,
+      [id]
+    );
+
     return NextResponse.json({
       success: true,
       restaurant: {
         ...result.rows[0],
-        seated_today: parseInt(seatedToday.rows[0].count)
+        seated_today: parseInt(seatedToday.rows[0].count),
+        queue_length: parseInt(queueCountResult.rows[0].count)
       }
     });
 

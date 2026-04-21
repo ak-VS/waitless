@@ -132,7 +132,7 @@ function FloorMapInner() {
           {[
             {v: tables.length, l: 'Tables', c:'var(--text)'},
             {v: tables.filter(t => !t.status || t.status === 'free').length, l: 'Available', c:'#4a9e6e'},
-            {v: '~20m', l: 'Avg wait', c:'var(--text)'},
+            {v: restaurant?.seated_today !== undefined ? `~${Math.max(5, (restaurant?.queue_length || 0) * 8)}m` : '~5m', l: 'Avg wait', c:'var(--text)'},
             {v: restaurant?.seated_today || 0, l: 'Seated today', c:'var(--text)'},
           ].map((item, i) => (
             <div key={i} style={{...s.stat, borderRight: i < 3 ? '1px solid var(--border)' : 'none'}}>

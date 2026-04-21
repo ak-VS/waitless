@@ -39,12 +39,12 @@ export async function GET(req: NextRequest) {
     );
 
     const stats = await query(
-      `SELECT 
-        COUNT(*) FILTER (WHERE status = 'waiting') as waiting,
-        COUNT(*) FILTER (WHERE status = 'seated' AND seated_at > NOW() - INTERVAL '1 day') as seated_today
-       FROM queue_entries WHERE restaurant_id = $1`,
-      [restaurant_id]
-    );
+  `SELECT 
+    COUNT(*) FILTER (WHERE status = 'waiting') as waiting,
+    COUNT(*) FILTER (WHERE status = 'seated' AND DATE(joined_at) = CURRENT_DATE) as seated_today
+   FROM queue_entries WHERE restaurant_id = $1`,
+  [restaurant_id]
+);
 
     return NextResponse.json({
       success: true,
