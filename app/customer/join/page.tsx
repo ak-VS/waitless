@@ -28,6 +28,8 @@ function JoinQueueInner() {
   const [occasion, setOccasion] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [locationBlocked, setLocationBlocked] = useState(false);
+  const [locationChecking, setLocationChecking] = useState(true);
 
   useEffect(() => {
     if (table_seats) setPartySize(parseInt(table_seats));
@@ -41,29 +43,45 @@ function JoinQueueInner() {
   }, [restaurant_id]);
 
   useEffect(() => {
-    if (!restaurant_id || table_id) return;
-    if (!navigator.geolocation) return;
+    if (!restaurant_id) return;
+    // If coming from a specific table selection, skip geofence (already checked on floor map)
+    if (table_id) { setLocationChecking(false); return; }
+    if (!navigator.geolocation) { setLocationChecking(false); return; }
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const res = await fetch('/api/geofence', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ restaurant_id, lat: pos.coords.latitude, lng: pos.coords.longitude })
-        });
-        const data = await res.json();
-        if (!data.allowed) {
-          setError(`You must be within 100m of the restaurant. You are ${data.distance_meters}m away.`);
+        try {
+          const res = await fetch('/api/geofence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ restaurant_id, lat: pos.coords.latitude, lng: pos.coords.longitude })
+          });
+          const data = await res.json();
+          if (!data.allowed) {
+            setLocationBlocked(true);
+            setError(`You must be within 100m of the restaurant. You are ${data.distance_meters}m away.`);
+          }
+        } catch {
+          // Network error — allow through
         }
+        setLocationChecking(false);
       },
       (err) => {
         if (err.code === err.PERMISSION_DENIED) {
+          setLocationBlocked(true);
           setError('Location access is required to join the queue. Please enable location and try again.');
         }
-      }
+        setLocationChecking(false);
+      },
+      { timeout: 8000, enableHighAccuracy: true }
     );
   }, [restaurant_id, table_id]);
 
   const handleSubmit = async () => {
+    if (locationBlocked) {
+      setError('Location verification failed. Please enable location access and reload.');
+      return;
+    }
     if (!name.trim()) { setError('Please enter your name'); return; }
     if (!partySize) { setError('Please select party size'); return; }
     setLoading(true); setError('');
@@ -127,6 +145,15 @@ function JoinQueueInner() {
             <button style={s.tcChange} onClick={() => router.push(`/customer/floor?r=${restaurant_id}`)}>Change</button>
           </div>
         )}
+
+        {locationChecking && !table_id ? (
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:16,padding:'10px 12px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:3}}>
+            <div style={{width:12,height:12,border:'1.5px solid var(--border)',borderTop:'1.5px solid var(--gold)',borderRadius:'50%',animation:'spin 1s linear infinite',flexShrink:0}}></div>
+            <div style={{fontSize:9,letterSpacing:'1px',textTransform:'uppercase',color:'var(--text3)'}}>Verifying your location…</div>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          </div>
+        ) : null}
+
         <div style={s.formTitle}>Join the Queue</div>
         <div style={s.formSub}>2 fields · 10 seconds</div>
         <label style={s.label}>Your name</label>
@@ -142,22 +169,29 @@ function JoinQueueInner() {
         <label style={s.label}>Occasion <span style={{color:'var(--text3)',fontSize:9}}>(optional)</span></label>
         <input style={s.input} placeholder="Birthday, anniversary, business lunch…"
           value={occasion} onChange={e => setOccasion(e.target.value)}/>
+
         {error && (
           <div style={s.errorBox}>
             {error}
-            {error.includes('Location') && (
+            {locationBlocked && (
               <div style={{marginTop:8}}>
-                <span
-                  onClick={() => { setError(''); window.location.reload(); }}
+                <span onClick={() => window.location.reload()}
                   style={{color:'#e88080',textDecoration:'underline',cursor:'pointer',fontSize:10}}>
-                  Reload and try again
+                  Enable location and reload
                 </span>
               </div>
             )}
           </div>
         )}
-        <button style={{...s.submitBtn, opacity: loading ? .7 : 1}} onClick={handleSubmit} disabled={loading}>
-          {loading ? 'Joining queue...' : 'Join Queue →'}
+
+        <button
+          style={{...s.submitBtn, opacity: (loading || locationBlocked || locationChecking) ? .5 : 1}}
+          onClick={handleSubmit}
+          disabled={loading || locationBlocked || locationChecking}>
+          {loading ? 'Joining queue...'
+            : locationBlocked ? '📍 Location required'
+            : locationChecking ? 'Verifying location…'
+            : 'Join Queue →'}
         </button>
         <div style={s.note}>You can roam freely after joining. We'll notify you when your table is ready.</div>
       </div>
