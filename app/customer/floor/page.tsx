@@ -35,7 +35,13 @@ function FloorMapInner() {
           setGeoStatus(data.allowed ? 'allowed' : 'denied');
         } catch { setGeoStatus('allowed'); }
       },
-      () => { setGeoStatus('allowed'); },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setGeoStatus('denied');
+        } else {
+          setGeoStatus('allowed');
+        }
+      },
       { timeout: 8000, enableHighAccuracy: true }
     );
   }, [restaurant_id]);
@@ -44,7 +50,6 @@ function FloorMapInner() {
     if (!restaurant_id || geoStatus !== 'allowed') return;
     Promise.all([
       fetch(`/api/tables?restaurant_id=${restaurant_id}`).then(r => r.json()),
-      fetch(`/api/restaurant/info?id=${restaurant_id}`).then(r => r.json()),
       fetch(`/api/restaurant/info?id=${restaurant_id}`).then(r => r.json()),
     ]).then(([tablesData, restData]) => {
       setTables(tablesData.tables || []);
@@ -77,10 +82,21 @@ function FloorMapInner() {
           <circle cx="12" cy="9" r="2.5" stroke="#c94c4c" strokeWidth="1.5"/>
         </svg>
       </div>
-      <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,color:'var(--text)',textAlign:'center',marginBottom:8}}>You're not nearby</div>
-      <div style={{fontSize:11,color:'var(--text3)',textAlign:'center',lineHeight:1.7,marginBottom:20}}>
-        This QR code is only valid at the restaurant.{distance && ` You are ${distance}m away.`} Please scan when you arrive.
+      <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,color:'var(--text)',textAlign:'center',marginBottom:8}}>
+        {distance ? "You're not nearby" : "Location access required"}
       </div>
+      <div style={{fontSize:11,color:'var(--text3)',textAlign:'center',lineHeight:1.7,marginBottom:20}}>
+        {distance
+          ? `This QR code is only valid at the restaurant. You are ${distance}m away. Please scan when you arrive.`
+          : 'Please allow location access to verify you are at the restaurant. This is required to join the queue.'}
+      </div>
+      {!distance && (
+        <button
+          onClick={() => { setGeoStatus('checking'); }}
+          style={{background:'var(--gold)',border:'none',color:'#0d0d0d',fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:'2px',textTransform:'uppercase',padding:'12px 24px',borderRadius:3,cursor:'pointer',fontWeight:500,marginBottom:12}}>
+          Try Again
+        </button>
+      )}
       <div style={{fontSize:9,letterSpacing:'2px',textTransform:'uppercase',color:'var(--text3)',textAlign:'center'}}>Required: within 100m of restaurant</div>
     </div>
   );
@@ -132,7 +148,7 @@ function FloorMapInner() {
           {[
             {v: tables.length, l: 'Tables', c:'var(--text)'},
             {v: tables.filter(t => !t.status || t.status === 'free').length, l: 'Available', c:'#4a9e6e'},
-            {v: restaurant?.seated_today !== undefined ? `~${Math.max(5, (restaurant?.queue_length || 0) * 8)}m` : '~5m', l: 'Avg wait', c:'var(--text)'},
+            {v: `~${Math.max(5, (restaurant?.queue_length || 0) * 8)}m`, l: 'Avg wait', c:'var(--text)'},
             {v: restaurant?.seated_today || 0, l: 'Seated today', c:'var(--text)'},
           ].map((item, i) => (
             <div key={i} style={{...s.stat, borderRight: i < 3 ? '1px solid var(--border)' : 'none'}}>

@@ -55,7 +55,11 @@ function JoinQueueInner() {
           setError(`You must be within 100m of the restaurant. You are ${data.distance_meters}m away.`);
         }
       },
-      () => {}
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setError('Location access is required to join the queue. Please enable location and try again.');
+        }
+      }
     );
   }, [restaurant_id, table_id]);
 
@@ -138,7 +142,20 @@ function JoinQueueInner() {
         <label style={s.label}>Occasion <span style={{color:'var(--text3)',fontSize:9}}>(optional)</span></label>
         <input style={s.input} placeholder="Birthday, anniversary, business lunch…"
           value={occasion} onChange={e => setOccasion(e.target.value)}/>
-        {error && <div style={s.errorBox}>{error}</div>}
+        {error && (
+          <div style={s.errorBox}>
+            {error}
+            {error.includes('Location') && (
+              <div style={{marginTop:8}}>
+                <span
+                  onClick={() => { setError(''); window.location.reload(); }}
+                  style={{color:'#e88080',textDecoration:'underline',cursor:'pointer',fontSize:10}}>
+                  Reload and try again
+                </span>
+              </div>
+            )}
+          </div>
+        )}
         <button style={{...s.submitBtn, opacity: loading ? .7 : 1}} onClick={handleSubmit} disabled={loading}>
           {loading ? 'Joining queue...' : 'Join Queue →'}
         </button>
