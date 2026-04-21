@@ -77,14 +77,14 @@ export default function StaffLogin() {
             style={{ width: '100%', background: 'var(--gold)', border: 'none', color: '#0d0d0d', fontFamily: "'Jost',sans-serif", fontSize: 11, letterSpacing: '2.5px', textTransform: 'uppercase', padding: 14, borderRadius: 3, cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 500, opacity: loading ? .7 : 1 }}>
             {loading ? 'Signing in...' : 'Sign In →'}
           </button>
-<div style={{textAlign:'center', marginTop:16, fontSize:10, color:'var(--text3)'}}>
+{/* <div style={{textAlign:'center', marginTop:16, fontSize:10, color:'var(--text3)'}}>
   New restaurant?{' '}
   <span 
     style={{color:'var(--gold)', cursor:'pointer'}}
     onClick={() => router.push('/restaurant/register')}>
     Register here
   </span>
-</div>
+</div> */}
           <div style={{ textAlign: 'center', fontSize: 9, color: 'var(--text3)', marginTop: 20, letterSpacing: '.5px' }}>
             Powered by <span style={{ color: 'var(--gold-dim)' }}>Waitless</span>
           </div>
