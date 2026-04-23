@@ -240,8 +240,8 @@ function FloorMapInner() {
 
             return (
               <g key={t.id}
-                style={{cursor: isUnavailable ? 'not-allowed' : 'pointer'}}
-                onClick={() => !isUnavailable && setSelectedTable(selectedTable?.id === t.id ? null : t)}>
+                style={{cursor: 'pointer'}}
+                onClick={() => setSelectedTable(selectedTable?.id === t.id ? null : t)}>
                 <rect x={x} y={y} width={w} height={h}
                   rx={t.seats >= 8 ? 4 : 3}
                   fill={tableFill}
@@ -281,20 +281,25 @@ function FloorMapInner() {
 
       {/* Tray */}
       <div style={s.tray}>
-        {!selectedTable
-          ? <div style={s.trayEmpty}>Tap a table — or use "Any Table" above</div>
-          : <div style={s.trayInfo}>
-              <div style={{flex:1}}>
-                <div style={s.trayName}>Table {selectedTable.table_label} · {selectedTable.seats}-Seater</div>
-                <div style={s.trayMeta}>
-                  {selectedTable.zone.charAt(0).toUpperCase()+selectedTable.zone.slice(1)} Seating
-                  {selectedTable.is_popular ? ' · Popular' : ''}
-                </div>
-              </div>
-              <button style={s.trayBtn} onClick={() => goToJoin(selectedTable)}>Reserve →</button>
-            </div>
-        }
+  {!selectedTable
+    ? <div style={s.trayEmpty}>Tap a table — or use "Any Table" above</div>
+    : <div style={s.trayInfo}>
+        <div style={{flex:1}}>
+          <div style={s.trayName}>Table {selectedTable.table_label} · {selectedTable.seats}-Seater</div>
+          <div style={s.trayMeta}>
+            {selectedTable.zone.charAt(0).toUpperCase()+selectedTable.zone.slice(1)} Seating
+            {selectedTable.is_popular ? ' · Popular' : ''}
+            {(selectedTable.status === 'occupied' || selectedTable.status === 'reserved') && (
+              <span style={{color:'#e88080'}}> · Currently taken — you'll be queued for this table</span>
+            )}
+          </div>
+        </div>
+        <button style={s.trayBtn} onClick={() => goToJoin(selectedTable)}>
+          {(selectedTable.status === 'occupied' || selectedTable.status === 'reserved') ? 'Join Wait →' : 'Reserve →'}
+        </button>
       </div>
+  }
+</div>
     </div>
   );
 }
