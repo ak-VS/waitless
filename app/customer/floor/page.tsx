@@ -91,8 +91,7 @@ function FloorMapInner() {
           : 'Please allow location access to verify you are at the restaurant. This is required to join the queue.'}
       </div>
       {!distance && (
-        <button
-          onClick={() => { setGeoStatus('checking'); }}
+        <button onClick={() => { setGeoStatus('checking'); }}
           style={{background:'var(--gold)',border:'none',color:'#0d0d0d',fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:'2px',textTransform:'uppercase',padding:'12px 24px',borderRadius:3,cursor:'pointer',fontWeight:500,marginBottom:12}}>
           Try Again
         </button>
@@ -216,23 +215,48 @@ function FloorMapInner() {
             const cx = x + w/2;
             const cy = y + h/2;
             const isSel = selectedTable?.id === t.id;
+            const isOccupied = t.status === 'occupied';
+            const isReserved = t.status === 'reserved';
+            const isUnavailable = isOccupied || isReserved;
+
+            const tableFill = isSel
+              ? 'rgba(201,168,76,.25)'
+              : isOccupied ? 'rgba(201,76,76,.2)'
+              : isReserved ? 'rgba(201,168,76,.12)'
+              : 'var(--map-table)';
+
+            const tableStroke = isSel
+              ? '#C9A84C'
+              : isOccupied ? '#c94c4c'
+              : isReserved ? '#C9A84C'
+              : t.is_popular ? '#8a6e2f'
+              : 'var(--map-table-border)';
+
+            const tableTextColor = isSel
+              ? '#C9A84C'
+              : isOccupied ? '#e88080'
+              : isReserved ? '#C9A84C'
+              : 'var(--text2)';
+
             return (
-              <g key={t.id} style={{cursor:'pointer'}}
-                onClick={() => setSelectedTable(selectedTable?.id === t.id ? null : t)}>
+              <g key={t.id}
+                style={{cursor: isUnavailable ? 'not-allowed' : 'pointer'}}
+                onClick={() => !isUnavailable && setSelectedTable(selectedTable?.id === t.id ? null : t)}>
                 <rect x={x} y={y} width={w} height={h}
                   rx={t.seats >= 8 ? 4 : 3}
-                  fill={isSel ? 'rgba(201,168,76,.2)' : 'var(--map-table)'}
-                  stroke={isSel ? '#C9A84C' : t.is_popular ? '#8a6e2f' : 'var(--map-table-border)'}
+                  fill={tableFill}
+                  stroke={tableStroke}
                   strokeWidth={isSel ? 2 : 1}
+                  opacity={isUnavailable ? 0.75 : 1}
                 />
                 <text x={cx} y={cy-3} textAnchor="middle" dominantBaseline="middle"
                   fontSize={t.seats>=8?11:10} fontFamily="Jost,sans-serif"
-                  fill={isSel?'#C9A84C':'var(--text2)'}>
+                  fill={tableTextColor}>
                   {t.table_label}
                 </text>
                 <text x={cx} y={cy+9} textAnchor="middle" dominantBaseline="middle"
                   fontSize={8} fontFamily="Jost,sans-serif" fill="var(--text3)">
-                  {t.seats}p
+                  {isOccupied ? 'taken' : isReserved ? 'rsv' : `${t.seats}p`}
                 </text>
               </g>
             );
@@ -244,8 +268,9 @@ function FloorMapInner() {
       <div style={s.legend}>
         {[
           {bg:'var(--map-table)', border:'1px solid var(--map-table-border)', label:'Available'},
-          {bg:'rgba(201,168,76,.2)', border:'1px solid #C9A84C', label:'Selected'},
-          {bg:'transparent', border:'1px solid #8a6e2f', label:'Popular'},
+          {bg:'rgba(201,168,76,.25)', border:'1px solid #C9A84C', label:'Selected'},
+          {bg:'rgba(201,76,76,.2)', border:'1px solid #c94c4c', label:'Occupied'},
+          {bg:'rgba(201,168,76,.12)', border:'1px solid #C9A84C', label:'Reserved'},
         ].map((l,i) => (
           <div key={i} style={s.leg}>
             <div style={{...s.ld, background:l.bg, border:l.border}}></div>
