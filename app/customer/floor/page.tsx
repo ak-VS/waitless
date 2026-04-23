@@ -122,7 +122,6 @@ function FloorMapInner() {
         @keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
       `}</style>
 
-      {/* Header */}
       <div style={s.header}>
         <div style={s.hTop}>
           <div>
@@ -168,7 +167,6 @@ function FloorMapInner() {
         </div>
       </div>
 
-      {/* Any table button */}
       <div style={s.anyWrap}>
         <button style={s.anyBtn} onClick={() => goToJoin(null)}>
           <div style={s.anyBtnLeft}>
@@ -179,7 +177,6 @@ function FloorMapInner() {
         </button>
       </div>
 
-      {/* Floor Map */}
       <div style={s.mapArea}>
         <svg
           viewBox="0 0 560 490"
@@ -215,48 +212,23 @@ function FloorMapInner() {
             const cx = x + w/2;
             const cy = y + h/2;
             const isSel = selectedTable?.id === t.id;
-            const isOccupied = t.status === 'occupied';
-            const isReserved = t.status === 'reserved';
-            const isUnavailable = isOccupied || isReserved;
-
-            const tableFill = isSel
-              ? 'rgba(201,168,76,.25)'
-              : isOccupied ? 'rgba(201,76,76,.2)'
-              : isReserved ? 'rgba(201,168,76,.12)'
-              : 'var(--map-table)';
-
-            const tableStroke = isSel
-              ? '#C9A84C'
-              : isOccupied ? '#c94c4c'
-              : isReserved ? '#C9A84C'
-              : t.is_popular ? '#8a6e2f'
-              : 'var(--map-table-border)';
-
-            const tableTextColor = isSel
-              ? '#C9A84C'
-              : isOccupied ? '#e88080'
-              : isReserved ? '#C9A84C'
-              : 'var(--text2)';
-
             return (
-              <g key={t.id}
-                style={{cursor: 'pointer'}}
+              <g key={t.id} style={{cursor:'pointer'}}
                 onClick={() => setSelectedTable(selectedTable?.id === t.id ? null : t)}>
                 <rect x={x} y={y} width={w} height={h}
                   rx={t.seats >= 8 ? 4 : 3}
-                  fill={tableFill}
-                  stroke={tableStroke}
+                  fill={isSel ? 'rgba(201,168,76,.2)' : 'var(--map-table)'}
+                  stroke={isSel ? '#C9A84C' : t.is_popular ? '#8a6e2f' : 'var(--map-table-border)'}
                   strokeWidth={isSel ? 2 : 1}
-                  opacity={isUnavailable ? 0.75 : 1}
                 />
                 <text x={cx} y={cy-3} textAnchor="middle" dominantBaseline="middle"
                   fontSize={t.seats>=8?11:10} fontFamily="Jost,sans-serif"
-                  fill={tableTextColor}>
+                  fill={isSel?'#C9A84C':'var(--text2)'}>
                   {t.table_label}
                 </text>
                 <text x={cx} y={cy+9} textAnchor="middle" dominantBaseline="middle"
                   fontSize={8} fontFamily="Jost,sans-serif" fill="var(--text3)">
-                  {isOccupied ? 'taken' : isReserved ? 'rsv' : `${t.seats}p`}
+                  {t.seats}p
                 </text>
               </g>
             );
@@ -264,13 +236,11 @@ function FloorMapInner() {
         </svg>
       </div>
 
-      {/* Legend */}
       <div style={s.legend}>
         {[
           {bg:'var(--map-table)', border:'1px solid var(--map-table-border)', label:'Available'},
-          {bg:'rgba(201,168,76,.25)', border:'1px solid #C9A84C', label:'Selected'},
-          {bg:'rgba(201,76,76,.2)', border:'1px solid #c94c4c', label:'Occupied'},
-          {bg:'rgba(201,168,76,.12)', border:'1px solid #C9A84C', label:'Reserved'},
+          {bg:'rgba(201,168,76,.2)', border:'1px solid #C9A84C', label:'Selected'},
+          {bg:'transparent', border:'1px solid #8a6e2f', label:'Popular'},
         ].map((l,i) => (
           <div key={i} style={s.leg}>
             <div style={{...s.ld, background:l.bg, border:l.border}}></div>
@@ -279,27 +249,21 @@ function FloorMapInner() {
         ))}
       </div>
 
-      {/* Tray */}
       <div style={s.tray}>
-  {!selectedTable
-    ? <div style={s.trayEmpty}>Tap a table — or use "Any Table" above</div>
-    : <div style={s.trayInfo}>
-        <div style={{flex:1}}>
-          <div style={s.trayName}>Table {selectedTable.table_label} · {selectedTable.seats}-Seater</div>
-          <div style={s.trayMeta}>
-            {selectedTable.zone.charAt(0).toUpperCase()+selectedTable.zone.slice(1)} Seating
-            {selectedTable.is_popular ? ' · Popular' : ''}
-            {(selectedTable.status === 'occupied' || selectedTable.status === 'reserved') && (
-              <span style={{color:'#e88080'}}> · Currently taken — you'll be queued for this table</span>
-            )}
-          </div>
-        </div>
-        <button style={s.trayBtn} onClick={() => goToJoin(selectedTable)}>
-          {(selectedTable.status === 'occupied' || selectedTable.status === 'reserved') ? 'Join Wait →' : 'Reserve →'}
-        </button>
+        {!selectedTable
+          ? <div style={s.trayEmpty}>Tap a table — or use "Any Table" above</div>
+          : <div style={s.trayInfo}>
+              <div style={{flex:1}}>
+                <div style={s.trayName}>Table {selectedTable.table_label} · {selectedTable.seats}-Seater</div>
+                <div style={s.trayMeta}>
+                  {selectedTable.zone.charAt(0).toUpperCase()+selectedTable.zone.slice(1)} Seating
+                  {selectedTable.is_popular ? ' · Popular' : ''}
+                </div>
+              </div>
+              <button style={s.trayBtn} onClick={() => goToJoin(selectedTable)}>Reserve →</button>
+            </div>
+        }
       </div>
-  }
-</div>
     </div>
   );
 }
